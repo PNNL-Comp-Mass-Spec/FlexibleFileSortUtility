@@ -14,13 +14,20 @@ namespace FlexibleFileSortUtility
         private static string mOutputFolderPath;
 
         private static bool mReverseSort;
+        private static bool mHasHeaderLine;
+
         private static int mSortColumn;
         private static string mColumnDelimiter;
-        private static bool mHasHeaderLine;
-        private static bool mIsNumeric;
+        private static bool mSortColumnIsNumeric;
 
+        private static int mMaxFileSizeMBForInMemorySort;
+        private static int mChunkSizeMB;
+
+        private static string mWorkingDirectoryPath;
         private static bool mUseLogFile;
         private static string mLogFilePath;
+
+        private static DateTime mLastProgressStatus;
 
         static int Main(string[] args)
         {
@@ -30,13 +37,20 @@ namespace FlexibleFileSortUtility
             mOutputFolderPath = string.Empty;
 
             mReverseSort = false;
+            mHasHeaderLine = true;
+
             mSortColumn = 0;
             mColumnDelimiter = string.Empty;
-            mHasHeaderLine = true;
-            mIsNumeric = false;
+            mSortColumnIsNumeric = false;
+
+            mMaxFileSizeMBForInMemorySort = TextFileSorter.DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB;
+            mChunkSizeMB = TextFileSorter.DEFAULT_CHUNK_SIZE_MB;
+            mWorkingDirectoryPath = TextFileSorter.GetTempFolderPath();
 
             mUseLogFile = false;
             mLogFilePath = string.Empty;
+
+            mLastProgressStatus = DateTime.UtcNow;
 
             try
             {
@@ -55,14 +69,23 @@ namespace FlexibleFileSortUtility
 
                 var sortUtility = new TextFileSorter
                 {
+                    ShowMessagesAtConsole = false,
                     ReverseSort = mReverseSort,
-                    SortColumn = mSortColumn,
-                    SortColumnIsNumeric = mIsNumeric,
-                    ColumnDelimiter = mColumnDelimiter,
                     HasHeaderLine = mHasHeaderLine,
+                    SortColumn = mSortColumn,
+                    SortColumnIsNumeric = mSortColumnIsNumeric,
+                    ColumnDelimiter = mColumnDelimiter,
+                    MaxFileSizeMBForInMemorySort = mMaxFileSizeMBForInMemorySort,
+                    ChunkSizeMB = mChunkSizeMB,
+                    WorkingDirectoryPath = mWorkingDirectoryPath,
                     LogMessagesToFile = mUseLogFile,
                     LogFilePath = mLogFilePath
                 };
+
+                sortUtility.MessageEvent += sortUtility_MessageEvent;
+                sortUtility.ErrorEvent += sortUtility_ErrorEvent;
+                sortUtility.WarningEvent += sortUtility_WarningEvent;
+                sortUtility.ProgressChanged += sortUtility_ProgressChanged;
 
                 var success = sortUtility.ProcessFile(mInputFilePath, mOutputFolderPath);
 
@@ -106,12 +129,35 @@ namespace FlexibleFileSortUtility
             return true;
         }
 
+        private static bool ParseParameterInt(
+            clsParseCommandLine objParseCommandLine,
+            string parameterName,
+            string description,
+            ref int targetVariable)
+        {
+            var strValue = string.Empty;
+            if (!ParseParameter(objParseCommandLine, parameterName, description, ref strValue)) return false;
+
+            if (string.IsNullOrWhiteSpace(strValue))
+                return true;
+
+            if (int.TryParse(strValue, out targetVariable))
+                return true;
+
+            ShowErrorMessage("Invalid valid for /" + parameterName + "; '" + strValue + "' is not an integer");
+            return false;
+        }
+
         private static bool SetOptionsUsingCommandLineParameters(FileProcessor.clsParseCommandLine objParseCommandLine)
         {
             // Returns True if no problems; otherwise, returns false
 
             string strValue = string.Empty;
-            var lstValidParameters = new List<string> { "I", "O", "R", "Col", "Delim", "NoHeader", "IsNumeric", "L", "Log"};
+            var lstValidParameters = new List<string> { 
+                "I", "O", "R", "NoHeader", 
+                "Col", "Delim", "IsNumeric", 
+                "MaxInMemory", "ChunkSize", 
+                "Work", "L", "Log" };
 
             try
             {
@@ -140,16 +186,12 @@ namespace FlexibleFileSortUtility
                     mReverseSort = true;
                 }
 
-                strValue = string.Empty;
-                if (!ParseParameter(objParseCommandLine, "Col", "a column number (the first column is column 1)", ref strValue)) return false;
-                if (!string.IsNullOrWhiteSpace(strValue))
+                if (objParseCommandLine.IsParameterPresent("NoHeader"))
                 {
-                    if (!int.TryParse(strValue, out mSortColumn))
-                    {
-                        ShowErrorMessage("Invalid column number for /Col; '" + strValue + "' is not an integer");
-                        return false;
-                    }
+                    mHasHeaderLine = false;
                 }
+
+                if (!ParseParameterInt(objParseCommandLine, "Col", "a column number (the first column is column 1)", ref mSortColumn)) return false;
 
                 strValue = string.Empty;
                 if (!ParseParameter(objParseCommandLine, "Delim", "a delimiter", ref strValue)) return false;
@@ -158,15 +200,16 @@ namespace FlexibleFileSortUtility
                     mColumnDelimiter = string.Copy(strValue);
                 }
 
-                if (objParseCommandLine.IsParameterPresent("NoHeader"))
-                {
-                    mHasHeaderLine = false;
-                }
-
                 if (objParseCommandLine.IsParameterPresent("IsNumeric"))
                 {
-                    mIsNumeric = true;
+                    mSortColumnIsNumeric = true;
                 }
+
+                if (!ParseParameterInt(objParseCommandLine, "MaxInMemory", "a file size, in MB", ref mMaxFileSizeMBForInMemorySort)) return false;
+
+                if (!ParseParameterInt(objParseCommandLine, "ChunkSize", "a memory size, in MB", ref mChunkSizeMB)) return false;
+
+                if (!ParseParameter(objParseCommandLine, "Work", "a folder path", ref mWorkingDirectoryPath)) return false;
 
                 if (objParseCommandLine.IsParameterPresent("L") || objParseCommandLine.IsParameterPresent("Log"))
                 {
@@ -233,8 +276,8 @@ namespace FlexibleFileSortUtility
                 Console.WriteLine(@"Program syntax:" + Environment.NewLine + Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location));
                 Console.WriteLine("   /I:InputFilePath [/O:OutputFolderPath] [/R] [/NoHeader] ");
                 Console.WriteLine("   [/Col:ColNumber] [/Delim:Delimiter] [/IsNumeric]");
-                Console.WriteLine("   [/MaxInMemory:MaxFileSizeInMemorySort]");
-                Console.WriteLine("   [/Chunk:ChunkSizeMB] [/Work:TempDirectoryPath]");
+                Console.WriteLine("   [/MaxInMemory:MaxFileSizeMBInMemorySort]");
+                Console.WriteLine("   [/ChunkSize:ChunkSizeMB] [/Work:TempDirectoryPath]");
                 Console.WriteLine("   [/L:[LogFilePath]]");
                 Console.WriteLine();
                 Console.WriteLine("The Input file path is required");
@@ -252,9 +295,9 @@ namespace FlexibleFileSortUtility
                 Console.WriteLine("Files less than " + TextFileSorter.DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB + " MB will be sorted in memory; override with /MaxInMemory");
                 Console.WriteLine();
                 Console.WriteLine("When sorting larger files, will parse the file to create smaller temporary files, then will merge those files together.  " +
-                                  "The merging will use " + TextFileSorter.DEFAULT_CHUNK_SIZE_MB + " MB for sorting each temporary file; override with /Chunk");
+                                  "The merging will use " + TextFileSorter.DEFAULT_CHUNK_SIZE_MB + " MB for sorting each temporary file; override with /ChunkSize");
                 Console.WriteLine();
-                Console.WriteLine("When sorting large files, or when replacing the source file, will create the temporary files in folder " + TextFileSorter.GetTempFolder());
+                Console.WriteLine("When sorting large files, or when replacing the source file, will create the temporary files in folder " + TextFileSorter.GetTempFolderPath());
                 Console.WriteLine("Use /Work to specify an alternate folder");
                 Console.WriteLine();
                 Console.WriteLine("Use /L to create a log file.  Specify the name with /L:LogFilePath");
@@ -294,5 +337,41 @@ namespace FlexibleFileSortUtility
                 // Ignore errors here
             }
         }
+
+        #region "Event Handlers"
+
+
+        private static void sortUtility_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            if (DateTime.UtcNow.Subtract(mLastProgressStatus).TotalMilliseconds > 250)
+            {
+                mLastProgressStatus = DateTime.UtcNow;
+                // Console.Write(".");
+            }
+        }
+
+
+        static void sortUtility_ErrorEvent(object sender, MessageEventArgs e)
+        {
+            if (e.Message.ToLower().StartsWith("error"))
+                Console.WriteLine(e.Message);
+            else
+                Console.WriteLine("Error: " + e.Message);
+        }
+
+        static void sortUtility_WarningEvent(object sender, MessageEventArgs e)
+        {
+            if (e.Message.ToLower().StartsWith("warning"))
+                Console.WriteLine(e.Message);
+            else
+                Console.WriteLine("Warning: " + e.Message);
+        }
+
+        static void sortUtility_MessageEvent(object sender, MessageEventArgs e)
+        {
+            Console.WriteLine(e.Message);
+        }
+
+        #endregion
     }
 }

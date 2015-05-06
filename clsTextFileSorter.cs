@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.NetworkInformation;
 using System.Threading;
 using System.Xml.Schema;
@@ -14,11 +15,11 @@ namespace FlexibleFileSortUtility
         #region "Constants"
 
         public const int DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB = 250;
-        
+
         public const int DEFAULT_CHUNK_SIZE_MB = 500;
 
         private const int MIN_ALLOWED_REPORTED_FREE_MEMORY_MB_AT_START = 30;
-        
+
         #endregion
 
         #region "Properties"
@@ -126,13 +127,13 @@ namespace FlexibleFileSortUtility
 
         #endregion
 
+        #region "Public methods"
+
         /// <summary>
         /// Constructor
         /// </summary>
         public TextFileSorter()
         {
-            ResetToDefaults();
-
             mFreeMemoryPerformanceCounter = new PerformanceCounter("Memory", "Available MBytes")
             {
                 ReadOnly = true
@@ -142,87 +143,24 @@ namespace FlexibleFileSortUtility
             if (mFreeMemoryMBAtStart < MIN_ALLOWED_REPORTED_FREE_MEMORY_MB_AT_START)
                 mFreeMemoryMBAtStart = MIN_ALLOWED_REPORTED_FREE_MEMORY_MB_AT_START;
 
-        }
+            ResetToDefaults();
 
-        private static void DeleteFileIgnoreErrors(FileInfo fiTempFile)
-        {
-            try
-            {
-                if (fiTempFile.Exists)
-                    fiTempFile.Delete();
-            }
-            catch (Exception)
-            {
-                // Ignore errors here
-            }
-        }
-
-        private float GetFreeMemoryMB()
-        {
-
-            float freeMemoryMB = 0;
-
-            try
-            {
-
-                int iterations = 0;
-                freeMemoryMB = 0;
-                while (freeMemoryMB < float.Epsilon && iterations <= 3)
-                {
-                    freeMemoryMB = mFreeMemoryPerformanceCounter.NextValue();
-                    if (freeMemoryMB < float.Epsilon)
-                    {
-                        // You sometimes have to call .NextValue() several times before it returns a useful number
-                        // Wait 1 second and then try again
-                        Thread.Sleep(1000);
-                    }
-                    iterations += 1;
-                }
-
-            }
-            catch (Exception ex)
-            {
-                // To avoid seeing this in the logs continually, we will only post this log message between 12 am and 12:30 am
-                // A possible fix for this is to add the user who is running this process to the "Performance Monitor Users" group in "Local Users and Groups" on the machine showing this error.  
-                // Alternatively, add the user to the "Administrators" group.
-                // In either case, you will need to reboot the computer for the change to take effect
-                if (!mWarnedPerformanceCounterError)
-                {
-                    mWarnedPerformanceCounterError = true;
-                    ShowWarning("Error instantiating the Memory.[Available MBytes] performance counter: " + ex.Message);
-                }
-            }
-
-
-            try
-            {
-                if (freeMemoryMB < float.Epsilon)
-                {
-                    // The Performance counters are still reporting a value of 0 for available memory; use an alternate method
-
-                    freeMemoryMB = Convert.ToSingle(new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory / 1024.0 / 1024.0);
-                }
-
-            }
-            catch (Exception ex)
-            {
-                if (!mWarnedAvailablePhysicalMemoryError)
-                {
-                    mWarnedAvailablePhysicalMemoryError = true;
-                    ShowWarning("Error determining available memory using Devices.ComputerInfo().AvailablePhysicalMemory: " + ex.Message);
-                }
-            }
-
-            return freeMemoryMB;
-        
         }
 
         public static string GetTempFolderPath()
         {
-            var fiTempFile = new FileInfo(Path.GetTempFileName());
-            DeleteFileIgnoreErrors(fiTempFile);
+            try
+            {
+                var fiTempFile = new FileInfo(Path.GetTempFileName());
+                DeleteFileIgnoreErrors(fiTempFile);
+                return fiTempFile.DirectoryName;
+            }
+            catch (Exception)
+            {
+                return ".";
+            }
 
-            return fiTempFile.DirectoryName;
+
         }
 
         public override bool ProcessFile(
@@ -316,7 +254,7 @@ namespace FlexibleFileSortUtility
 
             WorkingDirectoryPath = GetTempFolderPath();
         }
-       
+
         public bool SortFile(string inputFilePath, string outputFilePath)
         {
             if (string.IsNullOrEmpty(inputFilePath))
@@ -353,14 +291,13 @@ namespace FlexibleFileSortUtility
 
             var success = false;
 
-            if (fiInputFile.Length <= mMaxFileSizeMBForInMemorySort)
+            if (BytesToMB(fiInputFile.Length) <= mMaxFileSizeMBForInMemorySort)
             {
                 success = SortFileInMemory(fiInputFile, fiOutputFile);
             }
             else
             {
-                throw new NotImplementedException();
-                // success = SortFileUseSwap(fiInputFile, fiOutputFile);
+                success = SortFileUseSwap(fiInputFile, fiOutputFile);
             }
 
             return success;
@@ -376,48 +313,12 @@ namespace FlexibleFileSortUtility
                     return false;
                 }
 
-                string inputFilePathOriginal = string.Copy(fiInputFile.FullName);
+                var inputFilePathOriginal = string.Copy(fiInputFile.FullName);
 
-                ShowMessage("Sorting file " + inputFilePathOriginal);
-                if (ReverseSort)
-                    ShowMessage("SortMode=Reverse");
-                else
-                    ShowMessage("SortMode=Forward");
+                char delimiter;
+                int sortColumnToUse;
 
-                var delimiter = '\t';
-                var sortColumnToUse = SortColumn;
-
-                if (sortColumnToUse > 0)
-                {
-                    ShowMessage("SortColumn=" + sortColumnToUse);
-
-                    if (string.IsNullOrEmpty(mColumnDelimiter))
-                        mColumnDelimiter = "\t";
-
-                    var delimiterText = "<Tab>";
-                    if (mColumnDelimiter[0] != '\t')
-                    {
-                        delimiter = mColumnDelimiter[0];
-                        delimiterText = mColumnDelimiter.Substring(0, 1);
-                    }
-
-                    ShowMessage("Delimiter=" + delimiterText);
-                }
-
-                var replaceFile = false;
-
-                if (string.Equals(fiInputFile.FullName, fiOutputFile.FullName, StringComparison.CurrentCultureIgnoreCase))
-                {
-                    // Input and output files are identical
-
-                    var outputFilePathToUse = Path.GetFileName(Path.GetTempFileName());
-
-                    if (!string.IsNullOrWhiteSpace(WorkingDirectoryPath))
-                        outputFilePathToUse = Path.Combine(WorkingDirectoryPath, outputFilePathToUse);
-
-                    fiOutputFile = new FileInfo(outputFilePathToUse);
-                    replaceFile = true;
-                }
+                var replaceFile = PrepareForSort(fiInputFile, ref fiOutputFile, out sortColumnToUse, out delimiter);
 
                 var headerLine = string.Empty;
 
@@ -451,7 +352,7 @@ namespace FlexibleFileSortUtility
                             WriteInMemoryColumnDataToDisk(writer, ref cachedData, ref sortKeys, headerLine);
                         }
                     }
-                                   
+
                 }
 
                 fiInputFile.Refresh();
@@ -473,49 +374,257 @@ namespace FlexibleFileSortUtility
             }
             catch (Exception ex)
             {
-                HandleException("Error in SortFile", ex);
+                HandleException("Error in SortFileInMemory", ex);
                 return false;
             }
         }
 
+        public bool SortFileUseSwap(FileInfo fiInputFile, FileInfo fiOutputFile)
+        {
+            try
+            {
+                if (!fiInputFile.Exists)
+                {
+                    ShowErrorMessage("File not found: " + fiInputFile.FullName);
+                    return false;
+                }
+
+                var inputFilePathOriginal = string.Copy(fiInputFile.FullName);
+
+                char delimiter;
+                int sortColumnToUse;
+
+                var replaceFile = PrepareForSort(fiInputFile, ref fiOutputFile, out sortColumnToUse, out delimiter);
+
+                var headerLine = string.Empty;
+
+
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                HandleException("Error in SortFileUseSwap", ex);
+                return false;
+            }
+
+        }
+
+        public override string GetErrorMessage()
+        {
+            return base.GetBaseClassErrorMessage();
+        }
+
+        #endregion
+
+        #region "Private methods"
+
+        private double BytesToMB(long length)
+        {
+            return length / 1024.0 / 1024;
+        }
+
+        private static void DeleteFileIgnoreErrors(FileInfo fiTempFile)
+        {
+            try
+            {
+                if (fiTempFile.Exists)
+                    fiTempFile.Delete();
+            }
+            catch (Exception)
+            {
+                // Ignore errors here
+            }
+        }
+
+        private float GetFreeMemoryMB()
+        {
+
+            float freeMemoryMB = 0;
+
+            try
+            {
+
+                int iterations = 0;
+                freeMemoryMB = 0;
+                while (freeMemoryMB < float.Epsilon && iterations <= 3)
+                {
+                    freeMemoryMB = mFreeMemoryPerformanceCounter.NextValue();
+                    if (freeMemoryMB < float.Epsilon)
+                    {
+                        // You sometimes have to call .NextValue() several times before it returns a useful number
+                        // Wait 1 second and then try again
+                        Thread.Sleep(1000);
+                    }
+                    iterations += 1;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                // To avoid seeing this in the logs continually, we will only post this log message between 12 am and 12:30 am
+                // A possible fix for this is to add the user who is running this process to the "Performance Monitor Users" group in "Local Users and Groups" on the machine showing this error.  
+                // Alternatively, add the user to the "Administrators" group.
+                // In either case, you will need to reboot the computer for the change to take effect
+                if (!mWarnedPerformanceCounterError)
+                {
+                    mWarnedPerformanceCounterError = true;
+                    ShowWarning("Error instantiating the Memory.[Available MBytes] performance counter: " + ex.Message);
+                }
+            }
+
+
+            try
+            {
+                if (freeMemoryMB < float.Epsilon)
+                {
+                    // The Performance counters are still reporting a value of 0 for available memory; use an alternate method
+
+                    freeMemoryMB = Convert.ToSingle(new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory / 1024.0 / 1024.0);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                if (!mWarnedAvailablePhysicalMemoryError)
+                {
+                    mWarnedAvailablePhysicalMemoryError = true;
+                    ShowWarning("Error determining available memory using Devices.ComputerInfo().AvailablePhysicalMemory: " + ex.Message);
+                }
+            }
+
+            return freeMemoryMB;
+
+        }
+
+        private bool PrepareForSort(
+            FileInfo fiInputFile,
+            ref FileInfo fiOutputFile,
+            out int sortColumnToUse,
+            out char delimiter)
+        {
+            ShowMessage("Sorting file " + fiInputFile.FullName);
+            if (ReverseSort)
+            {
+                ShowMessage("SortMode=Reverse");
+            }
+            else
+            {
+                ShowMessage("SortMode=Forward");
+            }
+
+            delimiter = '\t';
+            sortColumnToUse = SortColumn;
+
+            if (sortColumnToUse > 0)
+            {
+                ShowMessage("SortColumn=" + sortColumnToUse);
+
+                if (string.IsNullOrEmpty(mColumnDelimiter))
+                {
+                    mColumnDelimiter = "\t";
+                }
+
+                var delimiterText = "<Tab>";
+                if (mColumnDelimiter[0] != '\t')
+                {
+                    delimiter = mColumnDelimiter[0];
+                    delimiterText = mColumnDelimiter.Substring(0, 1);
+                }
+
+                ShowMessage("Delimiter=" + delimiterText);
+            }
+
+            var replaceFile = false;
+
+            if (string.Equals(fiInputFile.FullName, fiOutputFile.FullName, StringComparison.CurrentCultureIgnoreCase))
+            {
+                // Input and output files are identical
+
+                var outputFilePathToUse = Path.GetFileName(Path.GetTempFileName());
+
+                if (!string.IsNullOrWhiteSpace(WorkingDirectoryPath))
+                {
+                    outputFilePathToUse = Path.Combine(WorkingDirectoryPath, outputFilePathToUse);
+                }
+
+                fiOutputFile = new FileInfo(outputFilePathToUse);
+                replaceFile = true;
+            }
+
+            return replaceFile;
+        }
+
+        private string ReadDataLine(StreamReader reader, int newLineLength, List<string> cachedData, ref long bytesRead)
+        {
+            var dataLine = reader.ReadLine();
+
+            if (string.IsNullOrEmpty(dataLine))
+            {
+                dataLine = string.Empty;
+            }
+
+            bytesRead += dataLine.Length + newLineLength;
+
+            cachedData.Add(dataLine);
+
+            return dataLine;
+        }
+
+        
         private List<string> StoreDataInMemory(StreamReader reader)
         {
+            var dtLastProgress = DateTime.UtcNow;
+            long linesRead = 0;
+            long bytesRead = 0;
+            var newLineLength = Environment.NewLine.Length;
+
             var cachedData = new List<string>();
 
             while (!reader.EndOfStream)
             {
-                var dataLine = reader.ReadLine();
-                if (string.IsNullOrEmpty(dataLine))
-                    dataLine = string.Empty;
+                ReadDataLine(reader, newLineLength, cachedData, ref bytesRead);
 
-                cachedData.Add(dataLine);
-               
+                linesRead++;
+                if (linesRead % 5000 == 0 && DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 0.5)
+                {
+                    dtLastProgress = StoreDataInMemoryUpdateProgress(reader.BaseStream.Length, bytesRead);
+                }
             }
 
             return cachedData;
-
         }
 
         private List<string> StoreDataInMemory(StreamReader reader, char delimiter, int sortColumnToUse, out List<string> sortKeys)
         {
+            var dtLastProgress = DateTime.UtcNow;
+            long linesRead = 0;
+            long bytesRead = 0;
+            var newLineLength = Environment.NewLine.Length;
+
             var cachedData = new List<string>();
             sortKeys = new List<string>();
 
             while (!reader.EndOfStream)
             {
-                var dataLine = reader.ReadLine();
-                if (string.IsNullOrEmpty(dataLine))
-                    dataLine = string.Empty;
-
-                cachedData.Add(dataLine);
+                var dataLine = ReadDataLine(reader, newLineLength, cachedData, ref bytesRead);
 
                 var dataColumns = dataLine.Split(delimiter);
 
                 if (sortColumnToUse <= dataColumns.Length)
+                {
                     sortKeys.Add(dataColumns[sortColumnToUse - 1]);
+                }
                 else
+                {
                     sortKeys.Add(string.Empty);
-             
+                }
+
+                linesRead++;
+                if (linesRead % 5000 == 0 && DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 0.5)
+                {
+                    dtLastProgress = StoreDataInMemoryUpdateProgress(reader.BaseStream.Length, bytesRead);
+                }
             }
 
             return cachedData;
@@ -523,29 +632,47 @@ namespace FlexibleFileSortUtility
 
         private List<string> StoreDataInMemory(StreamReader reader, char delimiter, int sortColumnToUse, out List<double> sortKeys)
         {
+            var dtLastProgress = DateTime.UtcNow;
+            long linesRead = 0;
+            long bytesRead = 0;
+            var newLineLength = Environment.NewLine.Length;
+
             var cachedData = new List<string>();
             sortKeys = new List<double>();
 
             while (!reader.EndOfStream)
             {
-                var dataLine = reader.ReadLine();
-                if (string.IsNullOrEmpty(dataLine))
-                    dataLine = string.Empty;
-
-                cachedData.Add(dataLine);
+                var dataLine = ReadDataLine(reader, newLineLength, cachedData, ref bytesRead);
 
                 var dataColumns = dataLine.Split(delimiter);
 
-                double value = 0;
                 if (sortColumnToUse <= dataColumns.Length)
-                    double.TryParse(dataColumns[sortColumnToUse - 1], out value);
+                {
+                    double value;
+                    sortKeys.Add(double.TryParse(dataColumns[sortColumnToUse - 1], out value) ? value : 0);
+                }
+                else
+                {
+                    sortKeys.Add(0);
+                }
 
-                sortKeys.Add(value);             
+                linesRead++;
+                if (linesRead % 5000 == 0 && DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 0.5)
+                {
+                    dtLastProgress = StoreDataInMemoryUpdateProgress(reader.BaseStream.Length, bytesRead);
+                }
             }
 
             return cachedData;
         }
-      
+
+        private DateTime StoreDataInMemoryUpdateProgress(long fileBytesTotal, long bytesRead)
+        {
+            var percentComplete = bytesRead / (float)fileBytesTotal * 100;
+            UpdateProgress("Caching data in memory", percentComplete);
+            return DateTime.UtcNow;
+        }
+        
         /// <summary>
         /// 
         /// </summary>
@@ -588,11 +715,22 @@ namespace FlexibleFileSortUtility
             if (HasHeaderLine)
                 writer.WriteLine(headerLine);
 
+            long linesWritten = 0;
+            var dtLastProgress = DateTime.UtcNow;
+            ResetProgress();
+
             foreach (var dataValue in data)
             {
                 writer.WriteLine(dataValue);
+                linesWritten++;
+                if (linesWritten % 50000 == 0 && DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 0.5)
+                {
+                    var percentComplete = linesWritten / (float)data.Length * 100;
+                    UpdateProgress("Writing to disk", percentComplete);
+                    dtLastProgress = DateTime.UtcNow;
+                }
             }
- 
+
         }
 
         private void WriteInMemoryDataToDisk(StreamWriter writer, List<string> cachedData, string headerLine)
@@ -618,12 +756,7 @@ namespace FlexibleFileSortUtility
             }
         }
 
-        public override string GetErrorMessage()
-        {
-
-            return base.GetBaseClassErrorMessage();
-
-        }
+        #endregion
 
     }
 }

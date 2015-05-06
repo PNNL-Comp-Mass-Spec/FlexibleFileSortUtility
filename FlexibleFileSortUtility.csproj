@@ -45,6 +45,7 @@
     <Compile Include="clsParseCommandLine.cs" />
     <Compile Include="clsProcessFilesBaseClass.cs" />
     <Compile Include="clsProcessFilesOrFoldersBase.cs" />
+    <Compile Include="clsSwapFileTextFileSorter.cs" />
     <Compile Include="clsTextFileSorter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
