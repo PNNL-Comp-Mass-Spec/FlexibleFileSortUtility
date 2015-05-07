@@ -8,13 +8,15 @@ namespace FlexibleFileSortUtility
     class Program
     {
 
-        private const string PROGRAM_DATE = "May 5, 2015";
+        private const string PROGRAM_DATE = "May 6, 2015";
 
         private static string mInputFilePath;
         private static string mOutputFolderPath;
 
         private static bool mReverseSort;
+        private static bool mIgnoreCase;
         private static bool mHasHeaderLine;
+        private static bool mKeepEmptyLines;
 
         private static int mSortColumn;
         private static string mColumnDelimiter;
@@ -37,7 +39,9 @@ namespace FlexibleFileSortUtility
             mOutputFolderPath = string.Empty;
 
             mReverseSort = false;
-            mHasHeaderLine = true;
+            mIgnoreCase = false;
+            mHasHeaderLine = false;
+            mKeepEmptyLines = false;
 
             mSortColumn = 0;
             mColumnDelimiter = string.Empty;
@@ -45,7 +49,7 @@ namespace FlexibleFileSortUtility
 
             mMaxFileSizeMBForInMemorySort = TextFileSorter.DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB;
             mChunkSizeMB = TextFileSorter.DEFAULT_CHUNK_SIZE_MB;
-            mWorkingDirectoryPath = TextFileSorter.GetTempFolderPath();
+            mWorkingDirectoryPath = UtilityMethods.GetTempFolderPath();
 
             mUseLogFile = false;
             mLogFilePath = string.Empty;
@@ -71,7 +75,9 @@ namespace FlexibleFileSortUtility
                 {
                     ShowMessagesAtConsole = false,
                     ReverseSort = mReverseSort,
+                    IgnoreCase = mIgnoreCase,
                     HasHeaderLine = mHasHeaderLine,
+                    KeepEmptyLines = mKeepEmptyLines,
                     SortColumn = mSortColumn,
                     SortColumnIsNumeric = mSortColumnIsNumeric,
                     ColumnDelimiter = mColumnDelimiter,
@@ -82,6 +88,7 @@ namespace FlexibleFileSortUtility
                     LogFilePath = mLogFilePath
                 };
 
+                // Attach events
                 sortUtility.MessageEvent += sortUtility_MessageEvent;
                 sortUtility.ErrorEvent += sortUtility_ErrorEvent;
                 sortUtility.WarningEvent += sortUtility_WarningEvent;
@@ -99,8 +106,6 @@ namespace FlexibleFileSortUtility
                 Console.WriteLine(ex.StackTrace);
                 return -1;
             }
-
-            System.Threading.Thread.Sleep(1000);
 
             return 0;
         }
@@ -152,9 +157,9 @@ namespace FlexibleFileSortUtility
         {
             // Returns True if no problems; otherwise, returns false
 
-            string strValue = string.Empty;
             var lstValidParameters = new List<string> { 
-                "I", "O", "R", "NoHeader", 
+                "I", "O", "R", "Reverse", 
+                "IgnoreCase", "Header", "KeepEmpty",
                 "Col", "Delim", "IsNumeric", 
                 "MaxInMemory", "ChunkSize", 
                 "Work", "L", "Log" };
@@ -181,19 +186,31 @@ namespace FlexibleFileSortUtility
                 if (!ParseParameter(objParseCommandLine, "I", "an input file name", ref mInputFilePath)) return false;
                 if (!ParseParameter(objParseCommandLine, "O", "an output folder name", ref mOutputFolderPath)) return false;
 
-                if (objParseCommandLine.IsParameterPresent("R"))
+                if (objParseCommandLine.IsParameterPresent("R") ||
+                    objParseCommandLine.IsParameterPresent("Reverse"))
                 {
                     mReverseSort = true;
                 }
 
-                if (objParseCommandLine.IsParameterPresent("NoHeader"))
+                if (objParseCommandLine.IsParameterPresent("IgnoreCase"))
                 {
-                    mHasHeaderLine = false;
+                    mIgnoreCase = true;
                 }
+
+                if (objParseCommandLine.IsParameterPresent("Header"))
+                {
+                    mHasHeaderLine = true;
+                }
+
+                if (objParseCommandLine.IsParameterPresent("KeepEmpty"))
+                {
+                    mKeepEmptyLines = true;
+                }
+                
 
                 if (!ParseParameterInt(objParseCommandLine, "Col", "a column number (the first column is column 1)", ref mSortColumn)) return false;
 
-                strValue = string.Empty;
+                var strValue = string.Empty;
                 if (!ParseParameter(objParseCommandLine, "Delim", "a delimiter", ref strValue)) return false;
                 if (!string.IsNullOrWhiteSpace(strValue))
                 {
@@ -270,24 +287,29 @@ namespace FlexibleFileSortUtility
             try
             {
                 Console.WriteLine();
-                Console.WriteLine(@"This program sorts a text file alphabetically (forward or reverse).  It supports both in-memory sorts for smaller files and use of temporary swap files for large files");
-                Console.WriteLine(@"It can alternatively sort on a column in a tab-delimited or comma-separated file.  The column sort mode also supports numeric sorting.");
+                Console.WriteLine("This program sorts a text file alphabetically (forward or reverse).");
+                Console.WriteLine("It supports both in-memory sorts for smaller files and use of temporary swap files for large files.");
+                Console.WriteLine("It can alternatively sort on a column in a tab-delimited or comma-separated file.");
+                Console.WriteLine("The column sort mode also supports numeric sorting.");
                 Console.WriteLine();
-                Console.WriteLine(@"Program syntax:" + Environment.NewLine + Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location));
-                Console.WriteLine("   /I:InputFilePath [/O:OutputFolderPath] [/R] [/NoHeader] ");
+                Console.WriteLine("Program syntax:" + Environment.NewLine + Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location));
+                Console.WriteLine("   /I:InputFilePath [/O:OutputFolderPath]");
+                Console.WriteLine("   [/R] [/Reverse] [/IgnoreCase] [/Header] [/KeepEmpty]");
                 Console.WriteLine("   [/Col:ColNumber] [/Delim:Delimiter] [/IsNumeric]");
                 Console.WriteLine("   [/MaxInMemory:MaxFileSizeMBInMemorySort]");
                 Console.WriteLine("   [/ChunkSize:ChunkSizeMB] [/Work:TempDirectoryPath]");
                 Console.WriteLine("   [/L:[LogFilePath]]");
                 Console.WriteLine();
                 Console.WriteLine("The Input file path is required");
-                Console.WriteLine("The Output folder path is optional; if not specified, then the sorted file will be in the same folder as the input file, but will have _Sorted appended to its name");
-                Console.WriteLine("Use /R to specify a reverse sort");
+                Console.WriteLine("The Output folder path is optional; if not specified, the sorted file will be in the same folder as the input file, but will have _Sorted appended to its name");
+                Console.WriteLine("If the output folder is different than the input file's folder, the output file name will match the input file name");
                 Console.WriteLine();
-                Console.WriteLine("The program assumes a header line is present and will not sort the first line in the file");
-                Console.WriteLine("Use /NoHeader to sort the first line with the remaining lines");
+                Console.WriteLine("Use /R or /Reverse to specify a reverse sort");
+                Console.WriteLine("Use /IgnoreCase to disable case-sensitive sorting (ignored if /IsNumeric is used)");
+                Console.WriteLine("Use /Header to indicate that a header line is present and that line should be the first line of the output file");
+                Console.WriteLine("Empty lines will be skipped by default; use /KeepEmpty to retain them");
                 Console.WriteLine();
-                Console.WriteLine("Use /Col:Colnumber to specify a column to sort on, for example /Col:2 for 2nd column in the file");
+                Console.WriteLine("Use /Col:Colnumber to specify a column to sort on, for example /Col:2 for the 2nd column in the file");
                 Console.WriteLine("When using /Col, use /Delim:Delimiter to specify a delimiter other than tab.");
                 Console.WriteLine("For example, for a CSV file use /Delimiter:,");
                 Console.WriteLine("Use /IsNumeric to specify that data in the sort column is numeric");
@@ -297,8 +319,8 @@ namespace FlexibleFileSortUtility
                 Console.WriteLine("When sorting larger files, will parse the file to create smaller temporary files, then will merge those files together.  " +
                                   "The merging will use " + TextFileSorter.DEFAULT_CHUNK_SIZE_MB + " MB for sorting each temporary file; override with /ChunkSize");
                 Console.WriteLine();
-                Console.WriteLine("When sorting large files, or when replacing the source file, will create the temporary files in folder " + TextFileSorter.GetTempFolderPath());
-                Console.WriteLine("Use /Work to specify an alternate folder");
+                Console.WriteLine("When sorting large files, or when replacing the source file, will create the temporary files in folder " + UtilityMethods.GetTempFolderPath());
+                Console.WriteLine(@"Use /Work to specify an alternate folder, for example /Work:C:\Temp");
                 Console.WriteLine();
                 Console.WriteLine("Use /L to create a log file.  Specify the name with /L:LogFilePath");
                 Console.WriteLine();
@@ -311,8 +333,8 @@ namespace FlexibleFileSortUtility
                 Console.WriteLine();
 
 
-                // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
-                System.Threading.Thread.Sleep(750);
+                // Delay for 1.5 seconds in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
+                System.Threading.Thread.Sleep(1500);
 
             }
             catch (Exception ex)

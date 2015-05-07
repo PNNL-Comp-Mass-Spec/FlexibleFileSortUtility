@@ -1,5 +1,4 @@
 FlexibleFileSortUtility Revision History
 
-Version 1.0.5602; May 5, 2015
+Version 1.0.5604; May 6, 2015
 	- Initial release
-

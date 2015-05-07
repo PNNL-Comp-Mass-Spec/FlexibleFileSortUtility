@@ -42,11 +42,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="clsDiskBackedTextFileSorter.cs" />
+    <Compile Include="clsHeap.cs" />
+    <Compile Include="clsHeapSort.cs" />
     <Compile Include="clsParseCommandLine.cs" />
+    <Compile Include="clsPriorityQueue.cs" />
     <Compile Include="clsProcessFilesBaseClass.cs" />
     <Compile Include="clsProcessFilesOrFoldersBase.cs" />
-    <Compile Include="clsSwapFileTextFileSorter.cs" />
     <Compile Include="clsTextFileSorter.cs" />
+    <Compile Include="clsUtilityMethods.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

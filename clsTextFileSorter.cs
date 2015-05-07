@@ -1,11 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net.NetworkInformation;
 using System.Threading;
-using System.Xml.Schema;
 
 namespace FlexibleFileSortUtility
 {
@@ -14,10 +12,8 @@ namespace FlexibleFileSortUtility
 
         #region "Constants"
 
-        public const int DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB = 250;
-
-        public const int DEFAULT_CHUNK_SIZE_MB = 500;
-
+        public const int DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB = 50;
+        public const int DEFAULT_CHUNK_SIZE_MB = DiskBackedTextFileSorter.DEFAULT_CHUNK_SIZE_MB;
         private const int MIN_ALLOWED_REPORTED_FREE_MEMORY_MB_AT_START = 30;
 
         #endregion
@@ -54,8 +50,8 @@ namespace FlexibleFileSortUtility
                 if (value > chunkSizeThresholdMB)
                     value = chunkSizeThresholdMB;
 
-                if (value < 25)
-                    value = 25;
+                if (value < 1)
+                    value = 1;
 
                 mChunkSizeMB = value;
             }
@@ -66,6 +62,16 @@ namespace FlexibleFileSortUtility
         /// </summary>
         /// <remarks>Defaults to True</remarks>
         public bool HasHeaderLine { get; set; }
+
+        /// <summary>
+        /// Set to True to keep empty lines instead of discarding them
+        /// </summary>
+        public bool KeepEmptyLines { get; set; }
+
+        /// <summary>
+        /// Set to True to disable case-sensitive sorting
+        /// </summary>
+        public bool IgnoreCase { get; set; }
 
         /// <summary>
         /// Maximum file size to sort in-memory
@@ -147,22 +153,11 @@ namespace FlexibleFileSortUtility
 
         }
 
-        public static string GetTempFolderPath()
+        public override string GetErrorMessage()
         {
-            try
-            {
-                var fiTempFile = new FileInfo(Path.GetTempFileName());
-                DeleteFileIgnoreErrors(fiTempFile);
-                return fiTempFile.DirectoryName;
-            }
-            catch (Exception)
-            {
-                return ".";
-            }
-
-
+            return base.GetBaseClassErrorMessage();
         }
-
+      
         public override bool ProcessFile(
             string inputFilePath,
             string outputFolderPath,
@@ -176,7 +171,7 @@ namespace FlexibleFileSortUtility
             {
                 if (string.IsNullOrWhiteSpace(inputFilePath))
                 {
-                    ShowMessage("Input folder name is empty");
+                    ShowErrorMessage("Input folder name is empty");
                     base.SetBaseClassErrorCode(eProcessFilesErrorCodes.InvalidInputFilePath);
                     return false;
                 }
@@ -200,7 +195,7 @@ namespace FlexibleFileSortUtility
 
                     if (string.IsNullOrWhiteSpace(mOutputFolderPath))
                     {
-                        ShowMessage("Parent directory is null for the output folder: " + mOutputFolderPath);
+                        ShowErrorMessage("Parent directory is null for the output folder: " + mOutputFolderPath);
                         base.SetBaseClassErrorCode(eProcessFilesErrorCodes.InvalidOutputFolderPath);
                         return false;
                     }
@@ -247,12 +242,14 @@ namespace FlexibleFileSortUtility
             MaxFileSizeMBForInMemorySort = DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB;
 
             ColumnDelimiter = "\t";
-            HasHeaderLine = true;
+            HasHeaderLine = false;
+            KeepEmptyLines = false;
+            IgnoreCase = false;
             ReverseSort = false;
             SortColumn = 0;
             SortColumnIsNumeric = false;
 
-            WorkingDirectoryPath = GetTempFolderPath();
+            WorkingDirectoryPath = UtilityMethods.GetTempFolderPath();
         }
 
         public bool SortFile(string inputFilePath, string outputFilePath)
@@ -320,63 +317,20 @@ namespace FlexibleFileSortUtility
 
                 var replaceFile = PrepareForSort(fiInputFile, ref fiOutputFile, out sortColumnToUse, out delimiter);
 
-                var headerLine = string.Empty;
+                SortFileInMemoryWork(fiInputFile, fiOutputFile, sortColumnToUse, delimiter);
 
-                using (var reader = new StreamReader(new FileStream(fiInputFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
-                using (var writer = new StreamWriter(new FileStream(fiOutputFile.FullName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)))
-                {
-                    ShowMessage("Caching data in memory");
-
-                    if (!reader.EndOfStream && HasHeaderLine)
-                        headerLine = reader.ReadLine();
-
-                    List<string> cachedData;
-
-                    if (sortColumnToUse < 1)
-                    {
-                        cachedData = StoreDataInMemory(reader);
-                        WriteInMemoryDataToDisk(writer, cachedData, headerLine);
-                    }
-                    else
-                    {
-                        if (SortColumnIsNumeric)
-                        {
-                            List<double> sortKeysNumeric;
-                            cachedData = StoreDataInMemory(reader, delimiter, sortColumnToUse, out sortKeysNumeric);
-                            WriteInMemoryColumnDataToDisk(writer, ref cachedData, ref sortKeysNumeric, headerLine);
-                        }
-                        else
-                        {
-                            List<string> sortKeys;
-                            cachedData = StoreDataInMemory(reader, delimiter, sortColumnToUse, out sortKeys);
-                            WriteInMemoryColumnDataToDisk(writer, ref cachedData, ref sortKeys, headerLine);
-                        }
-                    }
-
-                }
-
-                fiInputFile.Refresh();
-                fiOutputFile.Refresh();
-
-                if (replaceFile &&
-                    !string.Equals(fiInputFile.FullName, fiOutputFile.FullName, StringComparison.CurrentCultureIgnoreCase))
-                {
-                    ShowMessage("Replacing file " + fiInputFile.FullName + " with " + fiOutputFile.FullName);
-
-                    fiInputFile.Delete();
-                    fiOutputFile.MoveTo(inputFilePathOriginal);
-                }
+                FinalizeFilesAfterSort(fiInputFile, fiOutputFile, replaceFile, inputFilePathOriginal);
 
                 ShowMessage("Done");
 
                 return true;
-
             }
             catch (Exception ex)
             {
                 HandleException("Error in SortFileInMemory", ex);
                 return false;
             }
+
         }
 
         public bool SortFileUseSwap(FileInfo fiInputFile, FileInfo fiOutputFile)
@@ -396,9 +350,31 @@ namespace FlexibleFileSortUtility
 
                 var replaceFile = PrepareForSort(fiInputFile, ref fiOutputFile, out sortColumnToUse, out delimiter);
 
-                var headerLine = string.Empty;
+                var diskBackedFileSorter = new DiskBackedTextFileSorter(WorkingDirectoryPath)
+                {
+                    ChunkSizeMB = ChunkSizeMB,
+                    HasHeaderLine = HasHeaderLine,
+                    KeepEmptyLines = KeepEmptyLines,
+                    IgnoreCase = IgnoreCase,
+                    KeepTempFiles = false,
+                    ReverseSort = ReverseSort                    
+                };
 
+                // Attach events
+                diskBackedFileSorter.MessageEvent += diskBackedFileSorter_MessageEvent;
+                diskBackedFileSorter.ProgressChanged += diskBackedFileSorter_ProgressChanged;
+                diskBackedFileSorter.ProgressReset += diskBackedFileSorter_ProgressReset;
 
+                var success = diskBackedFileSorter.SortFile(fiInputFile, fiOutputFile, sortColumnToUse, SortColumnIsNumeric, delimiter);
+                if (!success)
+                {
+                    ShowMessage("Call to DiskBackedTextFileSorter.SortFile returned false");
+                    return false;
+                }
+
+                FinalizeFilesAfterSort(fiInputFile, fiOutputFile, replaceFile, inputFilePathOriginal);
+
+                ShowMessage("Done");
 
                 return true;
             }
@@ -410,11 +386,6 @@ namespace FlexibleFileSortUtility
 
         }
 
-        public override string GetErrorMessage()
-        {
-            return base.GetBaseClassErrorMessage();
-        }
-
         #endregion
 
         #region "Private methods"
@@ -424,16 +395,22 @@ namespace FlexibleFileSortUtility
             return length / 1024.0 / 1024;
         }
 
-        private static void DeleteFileIgnoreErrors(FileInfo fiTempFile)
+        private void FinalizeFilesAfterSort(
+            FileInfo fiInputFile, 
+            FileInfo fiOutputFile, 
+            bool replaceFile,
+            string inputFilePathOriginal)
         {
-            try
+            fiInputFile.Refresh();
+            fiOutputFile.Refresh();
+
+            if (replaceFile &&
+                !string.Equals(fiInputFile.FullName, fiOutputFile.FullName, StringComparison.CurrentCultureIgnoreCase))
             {
-                if (fiTempFile.Exists)
-                    fiTempFile.Delete();
-            }
-            catch (Exception)
-            {
-                // Ignore errors here
+                ShowMessage("Replacing file " + fiInputFile.FullName + " with " + fiOutputFile.FullName);
+
+                fiInputFile.Delete();
+                fiOutputFile.MoveTo(inputFilePathOriginal);
             }
         }
 
@@ -495,6 +472,11 @@ namespace FlexibleFileSortUtility
 
             return freeMemoryMB;
 
+        }
+
+        private IComparer<string> GetCurrentStringComparer()
+        {
+            return UtilityMethods.GetStringComparer(IgnoreCase);
         }
 
         private bool PrepareForSort(
@@ -571,7 +553,51 @@ namespace FlexibleFileSortUtility
             return dataLine;
         }
 
-        
+        private void SortFileInMemoryWork(
+            FileInfo fiInputFile, 
+            FileInfo fiOutputFile, 
+            int sortColumnToUse, 
+            char delimiter)
+        {
+            var headerLine = string.Empty;
+
+            // We open the writer file handle immediately to make sure we have write access to the output file
+            using (var reader = new StreamReader(new FileStream(fiInputFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+            using (var writer = new StreamWriter(new FileStream(fiOutputFile.FullName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)))
+            {
+                ShowMessage("Caching data in memory");
+
+                if (!reader.EndOfStream && HasHeaderLine)
+                {
+                    headerLine = reader.ReadLine();
+                }
+
+                List<string> cachedData;
+
+                if (sortColumnToUse < 1)
+                {
+                    cachedData = StoreDataInMemory(reader);
+                    WriteInMemoryDataToDisk(writer, cachedData, headerLine);
+                }
+                else
+                {
+                    if (SortColumnIsNumeric)
+                    {
+                        List<double> sortKeysNumeric;
+                        cachedData = StoreDataInMemory(reader, delimiter, sortColumnToUse, out sortKeysNumeric);
+                        WriteInMemoryColumnDataToDisk(writer, ref cachedData, ref sortKeysNumeric, headerLine, Comparer<double>.Default);
+                    }
+                    else
+                    {
+                        List<string> sortKeys;
+                        cachedData = StoreDataInMemory(reader, delimiter, sortColumnToUse, out sortKeys);
+                        WriteInMemoryColumnDataToDisk(writer, ref cachedData, ref sortKeys, headerLine, GetCurrentStringComparer());
+                    }
+                }
+            }
+            
+        }
+
         private List<string> StoreDataInMemory(StreamReader reader)
         {
             var dtLastProgress = DateTime.UtcNow;
@@ -672,7 +698,7 @@ namespace FlexibleFileSortUtility
             UpdateProgress("Caching data in memory", percentComplete);
             return DateTime.UtcNow;
         }
-        
+
         /// <summary>
         /// 
         /// </summary>
@@ -681,18 +707,19 @@ namespace FlexibleFileSortUtility
         /// <param name="cachedData"></param>
         /// <param name="sortKeys"></param>
         /// <param name="headerLine"></param>
+        /// <param name="comparer"></param>
         /// <remarks>cachedData and sortKeys are passed by ref because the memory is deallocated after the data is copied to array variables</remarks>
-        private void WriteInMemoryColumnDataToDisk<T>(StreamWriter writer, ref List<string> cachedData, ref List<T> sortKeys, string headerLine)
+        private void WriteInMemoryColumnDataToDisk<T>(
+            TextWriter writer, 
+            ref List<string> cachedData, 
+            ref List<T> sortKeys, 
+            string headerLine,
+            IComparer<T> comparer)
         {
             ShowMessage("Copying list data to arrays");
 
             var data = cachedData.ToArray();
             cachedData = null;
-
-            if (data.Length > 100000)
-            {
-                GarbageCollectNow();
-            }
 
             var keys = sortKeys.ToArray();
             sortKeys = null;
@@ -703,7 +730,7 @@ namespace FlexibleFileSortUtility
             }
 
             ShowMessage("Sorting " + data.Length.ToString("#,##0") + " rows");
-            Array.Sort(keys, data);
+            Array.Sort(keys, data, comparer);
 
             if (ReverseSort)
             {
@@ -721,7 +748,11 @@ namespace FlexibleFileSortUtility
 
             foreach (var dataValue in data)
             {
+                if (!KeepEmptyLines && string.IsNullOrWhiteSpace(dataValue))
+                    continue;
+
                 writer.WriteLine(dataValue);
+
                 linesWritten++;
                 if (linesWritten % 50000 == 0 && DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 0.5)
                 {
@@ -736,7 +767,7 @@ namespace FlexibleFileSortUtility
         private void WriteInMemoryDataToDisk(StreamWriter writer, List<string> cachedData, string headerLine)
         {
             ShowMessage("Sorting " + cachedData.Count.ToString("#,##0") + " rows");
-            cachedData.Sort();
+            cachedData.Sort(GetCurrentStringComparer());
 
             if (ReverseSort)
             {
@@ -752,11 +783,32 @@ namespace FlexibleFileSortUtility
 
             foreach (var dataValue in cachedData)
             {
+                if (!KeepEmptyLines && string.IsNullOrWhiteSpace(dataValue))
+                    continue;
+
                 writer.WriteLine(dataValue);
             }
         }
 
         #endregion
 
+        #region "Event Handlers"
+
+        void diskBackedFileSorter_MessageEvent(object sender, MessageEventArgs e)
+        {
+            ShowMessage(e.Message);
+        }
+
+        void diskBackedFileSorter_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            UpdateProgress(e.taskDescription, e.percentComplete);
+        }
+
+        void diskBackedFileSorter_ProgressReset(object sender, EventArgs e)
+        {
+            ResetProgress();
+        }
+
+        #endregion
     }
 }
