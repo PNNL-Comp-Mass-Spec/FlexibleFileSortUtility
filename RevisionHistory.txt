@@ -1,4 +1,7 @@
 FlexibleFileSortUtility Revision History
 
+Version 1.0.5610; May 12, 2015
+	- Added ComparerClassFactory
+
 Version 1.0.5604; May 6, 2015
 	- Initial release

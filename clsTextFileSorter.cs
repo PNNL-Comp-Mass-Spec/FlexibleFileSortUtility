@@ -655,7 +655,7 @@ namespace FlexibleFileSortUtility
 
             return cachedData;
         }
-
+      
         private List<string> StoreDataInMemory(StreamReader reader, char delimiter, int sortColumnToUse, out List<double> sortKeys)
         {
             var dtLastProgress = DateTime.UtcNow;

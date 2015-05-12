@@ -491,22 +491,7 @@ namespace FlexibleFileSortUtility
                     .Where(chunkReader => !chunkReader.EndOfStream)
                     .ToList();
 
-                IComparer<KeyValuePair<string, TextReader>> comparer;
-
-                if (ReverseSort)
-                {
-                    if (IgnoreCase)
-                        comparer = new ComparerClassReverseIgnoreCase();
-                    else
-                        comparer = new ComparerClassReverse();
-                }
-                else
-                {
-                    if (IgnoreCase)
-                        comparer = new ComparerClassForwardIgnoreCase();
-                    else
-                        comparer = new ComparerClassForward();
-                }
+                var comparer = ComparerClassFactory.GetComparer(ReverseSort, IgnoreCase);
 
                 var queue = new PriorityQueue<KeyValuePair<string, TextReader>>(comparer);
 
@@ -834,33 +819,63 @@ namespace FlexibleFileSortUtility
 
     }
 
-    internal class ComparerClassForward : IComparer<KeyValuePair<string, TextReader>>
+    internal class ComparerClassFactory
+    {
+        public static ComparerClassBase GetComparer(bool reverseSort, bool ignoreCase)
+        {
+            ComparerClassBase comparer;
+
+            if (reverseSort)
+            {
+                if (ignoreCase)
+                    comparer = new ComparerClassReverseIgnoreCase();
+                else
+                    comparer = new ComparerClassReverse();
+            }
+            else
+            {
+                if (ignoreCase)
+                    comparer = new ComparerClassForwardIgnoreCase();
+                else
+                    comparer = new ComparerClassForward();
+            }
+
+            return comparer;
+        }
+    }
+
+    internal abstract class ComparerClassBase : IComparer<KeyValuePair<string, TextReader>>
+    {
+        public abstract int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y);
+    }
+
+    internal class ComparerClassForward : ComparerClassBase
     {  
-        public int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y)
+        public override int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y)
         {
             return -string.CompareOrdinal(x.Key, y.Key);
         }
     }
 
-    internal class ComparerClassReverse : IComparer<KeyValuePair<string, TextReader>>
+    internal class ComparerClassReverse : ComparerClassBase
     {
-        public int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y)
+        public override int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y)
         {
             return string.CompareOrdinal(x.Key, y.Key);
         }
     }
 
-    internal class ComparerClassForwardIgnoreCase : IComparer<KeyValuePair<string, TextReader>>
+    internal class ComparerClassForwardIgnoreCase : ComparerClassBase
     {
-        public int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y)
+        public override int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y)
         {
             return -string.Compare(x.Key, y.Key, StringComparison.OrdinalIgnoreCase);
         }
     }
 
-    internal class ComparerClassReverseIgnoreCase : IComparer<KeyValuePair<string, TextReader>>
+    internal class ComparerClassReverseIgnoreCase : ComparerClassBase
     {
-        public int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y)
+        public override int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y)
         {
             return string.Compare(x.Key, y.Key, StringComparison.OrdinalIgnoreCase);
         }
