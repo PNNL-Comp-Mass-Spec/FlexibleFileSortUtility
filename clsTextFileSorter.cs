@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -25,10 +24,7 @@ namespace FlexibleFileSortUtility
         /// </summary>
         public string ColumnDelimiter
         {
-            get
-            {
-                return mColumnDelimiter;
-            }
+            get => mColumnDelimiter;
             set
             {
                 if (!string.IsNullOrEmpty(value))
@@ -38,10 +34,7 @@ namespace FlexibleFileSortUtility
 
         public int ChunkSizeMB
         {
-            get
-            {
-                return mChunkSizeMB;
-            }
+            get => mChunkSizeMB;
             set
             {
 
@@ -78,10 +71,7 @@ namespace FlexibleFileSortUtility
         /// </summary>
         public int MaxFileSizeMBForInMemorySort
         {
-            get
-            {
-                return mMaxFileSizeMBForInMemorySort;
-            }
+            get => mMaxFileSizeMBForInMemorySort;
             set
             {
 
@@ -155,9 +145,9 @@ namespace FlexibleFileSortUtility
 
         public override string GetErrorMessage()
         {
-            return base.GetBaseClassErrorMessage();
+            return GetBaseClassErrorMessage();
         }
-      
+
         public override bool ProcessFile(
             string inputFilePath,
             string outputFolderPath,
@@ -172,13 +162,13 @@ namespace FlexibleFileSortUtility
                 if (string.IsNullOrWhiteSpace(inputFilePath))
                 {
                     ShowErrorMessage("Input folder name is empty");
-                    base.SetBaseClassErrorCode(eProcessFilesErrorCodes.InvalidInputFilePath);
+                    SetBaseClassErrorCode(eProcessFilesErrorCodes.InvalidInputFilePath);
                     return false;
                 }
 
                 if (!CleanupFilePaths(ref inputFilePath, ref outputFolderPath))
                 {
-                    base.SetBaseClassErrorCode(eProcessFilesErrorCodes.FilePathError);
+                    SetBaseClassErrorCode(eProcessFilesErrorCodes.FilePathError);
                     return false;
                 }
 
@@ -196,7 +186,7 @@ namespace FlexibleFileSortUtility
                     if (string.IsNullOrWhiteSpace(mOutputFolderPath))
                     {
                         ShowErrorMessage("Parent directory is null for the output folder: " + mOutputFolderPath);
-                        base.SetBaseClassErrorCode(eProcessFilesErrorCodes.InvalidOutputFolderPath);
+                        SetBaseClassErrorCode(eProcessFilesErrorCodes.InvalidOutputFolderPath);
                         return false;
                     }
 
@@ -286,7 +276,7 @@ namespace FlexibleFileSortUtility
                 return false;
             }
 
-            var success = false;
+            bool success;
 
             if (BytesToMB(fiInputFile.Length) <= mMaxFileSizeMBForInMemorySort)
             {
@@ -312,10 +302,7 @@ namespace FlexibleFileSortUtility
 
                 var inputFilePathOriginal = string.Copy(fiInputFile.FullName);
 
-                char delimiter;
-                int sortColumnToUse;
-
-                var replaceFile = PrepareForSort(fiInputFile, ref fiOutputFile, out sortColumnToUse, out delimiter);
+                var replaceFile = PrepareForSort(fiInputFile, ref fiOutputFile, out var sortColumnToUse, out var delimiter);
 
                 SortFileInMemoryWork(fiInputFile, fiOutputFile, sortColumnToUse, delimiter);
 
@@ -345,10 +332,7 @@ namespace FlexibleFileSortUtility
 
                 var inputFilePathOriginal = string.Copy(fiInputFile.FullName);
 
-                char delimiter;
-                int sortColumnToUse;
-
-                var replaceFile = PrepareForSort(fiInputFile, ref fiOutputFile, out sortColumnToUse, out delimiter);
+                var replaceFile = PrepareForSort(fiInputFile, ref fiOutputFile, out var sortColumnToUse, out var delimiter);
 
                 var diskBackedFileSorter = new DiskBackedTextFileSorter(WorkingDirectoryPath)
                 {
@@ -357,7 +341,7 @@ namespace FlexibleFileSortUtility
                     KeepEmptyLines = KeepEmptyLines,
                     IgnoreCase = IgnoreCase,
                     KeepTempFiles = false,
-                    ReverseSort = ReverseSort                    
+                    ReverseSort = ReverseSort
                 };
 
                 RegisterEvents(diskBackedFileSorter);
@@ -394,8 +378,8 @@ namespace FlexibleFileSortUtility
         }
 
         private void FinalizeFilesAfterSort(
-            FileInfo fiInputFile, 
-            FileInfo fiOutputFile, 
+            FileSystemInfo fiInputFile,
+            FileInfo fiOutputFile,
             bool replaceFile,
             string inputFilePathOriginal)
         {
@@ -420,7 +404,7 @@ namespace FlexibleFileSortUtility
             try
             {
 
-                int iterations = 0;
+                var iterations = 0;
                 freeMemoryMB = 0;
                 while (freeMemoryMB < float.Epsilon && iterations <= 3)
                 {
@@ -438,7 +422,7 @@ namespace FlexibleFileSortUtility
             catch (Exception ex)
             {
                 // To avoid seeing this in the logs continually, we will only post this log message between 12 am and 12:30 am
-                // A possible fix for this is to add the user who is running this process to the "Performance Monitor Users" group in "Local Users and Groups" on the machine showing this error.  
+                // A possible fix for this is to add the user who is running this process to the "Performance Monitor Users" group in "Local Users and Groups" on the machine showing this error.
                 // Alternatively, add the user to the "Administrators" group.
                 // In either case, you will need to reboot the computer for the change to take effect
                 if (!mWarnedPerformanceCounterError)
@@ -478,7 +462,7 @@ namespace FlexibleFileSortUtility
         }
 
         private bool PrepareForSort(
-            FileInfo fiInputFile,
+            FileSystemInfo fiInputFile,
             ref FileInfo fiOutputFile,
             out int sortColumnToUse,
             out char delimiter)
@@ -535,7 +519,7 @@ namespace FlexibleFileSortUtility
             return replaceFile;
         }
 
-        private string ReadDataLine(StreamReader reader, int newLineLength, List<string> cachedData, ref long bytesRead)
+        private string ReadDataLine(TextReader reader, int newLineLength, ICollection<string> cachedData, ref long bytesRead)
         {
             var dataLine = reader.ReadLine();
 
@@ -552,9 +536,9 @@ namespace FlexibleFileSortUtility
         }
 
         private void SortFileInMemoryWork(
-            FileInfo fiInputFile, 
-            FileInfo fiOutputFile, 
-            int sortColumnToUse, 
+            FileSystemInfo fiInputFile,
+            FileSystemInfo fiOutputFile,
+            int sortColumnToUse,
             char delimiter)
         {
             var headerLine = string.Empty;
@@ -581,19 +565,17 @@ namespace FlexibleFileSortUtility
                 {
                     if (SortColumnIsNumeric)
                     {
-                        List<double> sortKeysNumeric;
-                        cachedData = StoreDataInMemory(reader, delimiter, sortColumnToUse, out sortKeysNumeric);
+                        cachedData = StoreDataInMemory(reader, delimiter, sortColumnToUse, out List<double> sortKeysNumeric);
                         WriteInMemoryColumnDataToDisk(writer, ref cachedData, ref sortKeysNumeric, headerLine, Comparer<double>.Default);
                     }
                     else
                     {
-                        List<string> sortKeys;
-                        cachedData = StoreDataInMemory(reader, delimiter, sortColumnToUse, out sortKeys);
+                        cachedData = StoreDataInMemory(reader, delimiter, sortColumnToUse, out List<string> sortKeys);
                         WriteInMemoryColumnDataToDisk(writer, ref cachedData, ref sortKeys, headerLine, GetCurrentStringComparer());
                     }
                 }
             }
-            
+
         }
 
         private List<string> StoreDataInMemory(StreamReader reader)
@@ -653,7 +635,7 @@ namespace FlexibleFileSortUtility
 
             return cachedData;
         }
-      
+
         private List<string> StoreDataInMemory(StreamReader reader, char delimiter, int sortColumnToUse, out List<double> sortKeys)
         {
             var dtLastProgress = DateTime.UtcNow;
@@ -672,8 +654,7 @@ namespace FlexibleFileSortUtility
 
                 if (sortColumnToUse <= dataColumns.Length)
                 {
-                    double value;
-                    sortKeys.Add(double.TryParse(dataColumns[sortColumnToUse - 1], out value) ? value : 0);
+                    sortKeys.Add(double.TryParse(dataColumns[sortColumnToUse - 1], out var value) ? value : 0);
                 }
                 else
                 {
@@ -698,7 +679,7 @@ namespace FlexibleFileSortUtility
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="writer"></param>
@@ -708,9 +689,9 @@ namespace FlexibleFileSortUtility
         /// <param name="comparer"></param>
         /// <remarks>cachedData and sortKeys are passed by ref because the memory is deallocated after the data is copied to array variables</remarks>
         private void WriteInMemoryColumnDataToDisk<T>(
-            TextWriter writer, 
-            ref List<string> cachedData, 
-            ref List<T> sortKeys, 
+            TextWriter writer,
+            ref List<string> cachedData,
+            ref List<T> sortKeys,
             string headerLine,
             IComparer<T> comparer)
         {
@@ -762,7 +743,7 @@ namespace FlexibleFileSortUtility
 
         }
 
-        private void WriteInMemoryDataToDisk(StreamWriter writer, List<string> cachedData, string headerLine)
+        private void WriteInMemoryDataToDisk(TextWriter writer, List<string> cachedData, string headerLine)
         {
             ShowMessage("Sorting " + cachedData.Count.ToString("#,##0") + " rows");
             cachedData.Sort(GetCurrentStringComparer());
@@ -799,6 +780,7 @@ namespace FlexibleFileSortUtility
         }
 
         #endregion
+
 
     }
 }

@@ -27,10 +27,7 @@ namespace FlexibleFileSortUtility
 
         public int ChunkSizeMB
         {
-            get
-            {
-                return mChunkSizeMB;
-            }
+            get => mChunkSizeMB;
             set
             {
                 if (value < 1)
@@ -54,7 +51,7 @@ namespace FlexibleFileSortUtility
 
         public bool ReverseSort { get; set; }
 
-        public DirectoryInfo WorkingDirectoryPath { get; private set; }
+        public DirectoryInfo WorkingDirectoryPath { get; }
 
         #endregion
 
@@ -149,7 +146,7 @@ namespace FlexibleFileSortUtility
             IDictionary<string, List<KeyValuePair<TextReader, string>>> lstNextKeyByFile,
             TextReader chunkReader,
             string dataLine,
-            int sortColumnToUse, 
+            int sortColumnToUse,
             char delimiter)
         {
             var sortKey = GetSortKey(dataLine, sortColumnToUse, delimiter);
@@ -175,9 +172,8 @@ namespace FlexibleFileSortUtility
             T sortKey,
             string dataLine)
         {
-            List<KeyValuePair<TextReader, string>> readers;
 
-            if (lstNextKeyByFile.TryGetValue(sortKey, out readers))
+            if (lstNextKeyByFile.TryGetValue(sortKey, out var readers))
             {
                 readers.Add(new KeyValuePair<TextReader, string>(chunkReader, dataLine));
             }
@@ -208,8 +204,7 @@ namespace FlexibleFileSortUtility
         {
             var sortKey = GetSortKey(dataLine, sortColumnToUse, delimiter);
 
-            double value;
-            if (double.TryParse(sortKey, out value))
+            if (double.TryParse(sortKey, out var value))
                 return value;
 
             return 0;
@@ -294,7 +289,7 @@ namespace FlexibleFileSortUtility
                 MergeChunksSortedList(dataLinesTotal, writer, headerLine, chunkFilePaths, lstNextKeyByFile,
                                       sortColumnToUse, delimiter);
             }
-            
+
         }
 
 
@@ -304,7 +299,7 @@ namespace FlexibleFileSortUtility
             string headerLine,
             IEnumerable<string> chunkFilePaths,
             SortedList<double, List<KeyValuePair<TextReader, string>>> lstNextKeyByFile,
-            int sortColumnToUse, 
+            int sortColumnToUse,
             char delimiter)
         {
 
@@ -367,7 +362,7 @@ namespace FlexibleFileSortUtility
                         }
                     }
 
-                    for (int i = 0; i < chunkReaders.Count; i++)
+                    for (var i = 0; i < chunkReaders.Count; i++)
                     {
                         linesWritten++;
                         if (linesWritten % 50000 == 0 && DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 0.5)
@@ -413,7 +408,7 @@ namespace FlexibleFileSortUtility
                         continue;
 
                     if (sortColumnToUse > 0)
-                        AddSortedListEntry(lstNextKeyByFile, chunkReader, dataLine, sortColumnToUse, delimiter);                        
+                        AddSortedListEntry(lstNextKeyByFile, chunkReader, dataLine, sortColumnToUse, delimiter);
                     else
                         AddSortedListEntry(lstNextKeyByFile, chunkReader, dataLine);
                 }
@@ -457,7 +452,7 @@ namespace FlexibleFileSortUtility
                         }
                     }
 
-                    for (int i = 0; i < chunkReaders.Count; i++)
+                    for (var i = 0; i < chunkReaders.Count; i++)
                     {
                         linesWritten++;
                         if (linesWritten % 50000 == 0 && DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 0.5)
@@ -739,8 +734,8 @@ namespace FlexibleFileSortUtility
         }
 
         private string WriteToChunk<T>(
-            ref int chunkNumber, 
-            List<string> cachedData, 
+            ref int chunkNumber,
+            List<string> cachedData,
             List<T> sortKeys,
             IComparer<T> comparer)
         {
@@ -830,7 +825,7 @@ namespace FlexibleFileSortUtility
     }
 
     internal class ComparerClassForward : ComparerClassBase
-    {  
+    {
         public override int Compare(KeyValuePair<string, TextReader> x, KeyValuePair<string, TextReader> y)
         {
             return -string.CompareOrdinal(x.Key, y.Key);

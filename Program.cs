@@ -7,7 +7,7 @@ namespace FlexibleFileSortUtility
     class Program
     {
 
-        private const string PROGRAM_DATE = "May 12, 2015";
+        private const string PROGRAM_DATE = "February 17, 2018";
 
         private static string mInputFilePath;
         private static string mOutputFolderPath;
@@ -153,11 +153,11 @@ namespace FlexibleFileSortUtility
         {
             // Returns True if no problems; otherwise, returns false
 
-            var lstValidParameters = new List<string> { 
-                "I", "O", "R", "Reverse", 
+            var lstValidParameters = new List<string> {
+                "I", "O", "R", "Reverse",
                 "IgnoreCase", "Header", "KeepEmpty",
-                "Col", "Delim", "IsNumeric", 
-                "MaxInMemory", "ChunkSize", 
+                "Col", "Delim", "IsNumeric",
+                "MaxInMemory", "ChunkSize",
                 "Work", "L", "Log" };
 
             try

@@ -49,7 +49,7 @@ namespace FlexibleFileSortUtility
 
         private void Heapify()
         {
-            for (int i = Parent(Count - 1); i >= 0; i--)
+            for (var i = Parent(Count - 1); i >= 0; i--)
             {
                 HeapDown(i);
             }
@@ -57,10 +57,10 @@ namespace FlexibleFileSortUtility
 
         private void HeapUp(int i)
         {
-            T elt = _list[i];
+            var elt = _list[i];
             while (true)
             {
-                int parent = Parent(i);
+                var parent = Parent(i);
                 if (parent < 0 || _comparer.Compare(_list[parent], elt) > 0) break;
                 SwapCells(i, parent);
                 i = parent;
@@ -71,11 +71,11 @@ namespace FlexibleFileSortUtility
         {
             while (true)
             {
-                int lchild = LeftChild(i);
+                var lchild = LeftChild(i);
                 if (lchild < 0) break;
-                int rchild = RightChild(i);
+                var rchild = RightChild(i);
 
-                int child = rchild < 0
+                var child = rchild < 0
                   ? lchild
                   : _comparer.Compare(_list[lchild], _list[rchild]) > 0 ? lchild : rchild;
 
@@ -95,7 +95,7 @@ namespace FlexibleFileSortUtility
 
         private void SwapCells(int i, int j)
         {
-            T temp = _list[i];
+            var temp = _list[i];
             _list[i] = _list[j];
             _list[j] = temp;
         }
