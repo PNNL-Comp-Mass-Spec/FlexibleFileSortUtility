@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace FlexibleFileSortUtility
 {
-    public class TextFileSorter : clsProcessFilesBaseClass
+    public class TextFileSorter : PRISM.FileProcessor.ProcessFilesBase
     {
 
         #region "Constants"
@@ -360,10 +360,8 @@ namespace FlexibleFileSortUtility
                     ReverseSort = ReverseSort                    
                 };
 
-                // Attach events
-                diskBackedFileSorter.MessageEvent += diskBackedFileSorter_MessageEvent;
-                diskBackedFileSorter.ProgressChanged += diskBackedFileSorter_ProgressChanged;
-                diskBackedFileSorter.ProgressReset += diskBackedFileSorter_ProgressReset;
+                RegisterEvents(diskBackedFileSorter);
+                diskBackedFileSorter.ProgressReset += DiskBackedFileSorter_ProgressReset;
 
                 var success = diskBackedFileSorter.SortFile(fiInputFile, fiOutputFile, sortColumnToUse, SortColumnIsNumeric, delimiter);
                 if (!success)
@@ -792,23 +790,15 @@ namespace FlexibleFileSortUtility
 
         #endregion
 
+
         #region "Event Handlers"
 
-        void diskBackedFileSorter_MessageEvent(object sender, MessageEventArgs e)
-        {
-            ShowMessage(e.Message);
-        }
-
-        void diskBackedFileSorter_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            UpdateProgress(e.taskDescription, e.percentComplete);
-        }
-
-        void diskBackedFileSorter_ProgressReset(object sender, EventArgs e)
+        private void DiskBackedFileSorter_ProgressReset()
         {
             ResetProgress();
         }
 
         #endregion
+
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using FileProcessor;
 
 namespace FlexibleFileSortUtility
 {
@@ -33,7 +32,7 @@ namespace FlexibleFileSortUtility
 
         static int Main(string[] args)
         {
-            var objParseCommandLine = new FileProcessor.clsParseCommandLine();
+            var commandLineParser = new PRISM.clsParseCommandLine();
 
             mInputFilePath = string.Empty;
             mOutputFolderPath = string.Empty;
@@ -58,13 +57,13 @@ namespace FlexibleFileSortUtility
 
             try
             {
-                if (objParseCommandLine.ParseCommandLine())
+                if (commandLineParser.ParseCommandLine())
                 {
-                    SetOptionsUsingCommandLineParameters(objParseCommandLine);
+                    SetOptionsUsingCommandLineParameters(commandLineParser);
                 }
 
-                if (objParseCommandLine.NeedToShowHelp ||
-                    (objParseCommandLine.ParameterCount + objParseCommandLine.NonSwitchParameterCount) == 0 ||
+                if (commandLineParser.NeedToShowHelp ||
+                    (commandLineParser.ParameterCount + commandLineParser.NonSwitchParameterCount) == 0 ||
                     string.IsNullOrWhiteSpace(mInputFilePath))
                 {
                     ShowProgramHelp();
@@ -73,7 +72,6 @@ namespace FlexibleFileSortUtility
 
                 var sortUtility = new TextFileSorter
                 {
-                    ShowMessagesAtConsole = false,
                     ReverseSort = mReverseSort,
                     IgnoreCase = mIgnoreCase,
                     HasHeaderLine = mHasHeaderLine,
@@ -89,10 +87,10 @@ namespace FlexibleFileSortUtility
                 };
 
                 // Attach events
-                sortUtility.MessageEvent += sortUtility_MessageEvent;
-                sortUtility.ErrorEvent += sortUtility_ErrorEvent;
-                sortUtility.WarningEvent += sortUtility_WarningEvent;
-                sortUtility.ProgressChanged += sortUtility_ProgressChanged;
+                sortUtility.StatusEvent += SortUtility_StatusEvent;
+                sortUtility.ErrorEvent += SortUtility_ErrorEvent;
+                sortUtility.WarningEvent += SortUtility_WarningEvent;
+                sortUtility.ProgressUpdate += SortUtility_ProgressUpdate;
 
                 var success = sortUtility.ProcessFile(mInputFilePath, mOutputFolderPath);
 
@@ -102,8 +100,7 @@ namespace FlexibleFileSortUtility
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error occurred in Program->Main: " + Environment.NewLine + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                ShowErrorMessage("Error occurred in Program->Main", ex);
                 return -1;
             }
 
@@ -116,13 +113,12 @@ namespace FlexibleFileSortUtility
         }
 
         private static bool ParseParameter(
-            clsParseCommandLine objParseCommandLine,
+            PRISM.clsParseCommandLine commandLineParser,
             string parameterName,
             string description,
             ref string targetVariable)
         {
-            string value;
-            if (objParseCommandLine.RetrieveValueForParameter(parameterName, out value))
+            if (commandLineParser.RetrieveValueForParameter(parameterName, out var value))
             {
                 if (string.IsNullOrWhiteSpace(value))
                 {
@@ -135,13 +131,13 @@ namespace FlexibleFileSortUtility
         }
 
         private static bool ParseParameterInt(
-            clsParseCommandLine objParseCommandLine,
+            PRISM.clsParseCommandLine commandLineParser,
             string parameterName,
             string description,
             ref int targetVariable)
         {
             var strValue = string.Empty;
-            if (!ParseParameter(objParseCommandLine, parameterName, description, ref strValue)) return false;
+            if (!ParseParameter(commandLineParser, parameterName, description, ref strValue)) return false;
 
             if (string.IsNullOrWhiteSpace(strValue))
                 return true;
@@ -153,7 +149,7 @@ namespace FlexibleFileSortUtility
             return false;
         }
 
-        private static bool SetOptionsUsingCommandLineParameters(FileProcessor.clsParseCommandLine objParseCommandLine)
+        private static bool SetOptionsUsingCommandLineParameters(PRISM.clsParseCommandLine commandLineParser)
         {
             // Returns True if no problems; otherwise, returns false
 
@@ -167,10 +163,10 @@ namespace FlexibleFileSortUtility
             try
             {
                 // Make sure no invalid parameters are present
-                if (objParseCommandLine.InvalidParametersPresent(lstValidParameters))
+                if (commandLineParser.InvalidParametersPresent(lstValidParameters))
                 {
                     var badArguments = new List<string>();
-                    foreach (string item in objParseCommandLine.InvalidParameters(lstValidParameters))
+                    foreach (var item in commandLineParser.InvalidParameters(lstValidParameters))
                     {
                         badArguments.Add("/" + item);
                     }
@@ -180,61 +176,61 @@ namespace FlexibleFileSortUtility
                     return false;
                 }
 
-                if (objParseCommandLine.NonSwitchParameterCount > 0)
-                    mInputFilePath = objParseCommandLine.RetrieveNonSwitchParameter(0);
+                if (commandLineParser.NonSwitchParameterCount > 0)
+                    mInputFilePath = commandLineParser.RetrieveNonSwitchParameter(0);
 
-                if (!ParseParameter(objParseCommandLine, "I", "an input file name", ref mInputFilePath)) return false;
-                if (!ParseParameter(objParseCommandLine, "O", "an output folder name", ref mOutputFolderPath)) return false;
+                if (!ParseParameter(commandLineParser, "I", "an input file name", ref mInputFilePath)) return false;
+                if (!ParseParameter(commandLineParser, "O", "an output folder name", ref mOutputFolderPath)) return false;
 
-                if (objParseCommandLine.IsParameterPresent("R") ||
-                    objParseCommandLine.IsParameterPresent("Reverse"))
+                if (commandLineParser.IsParameterPresent("R") ||
+                    commandLineParser.IsParameterPresent("Reverse"))
                 {
                     mReverseSort = true;
                 }
 
-                if (objParseCommandLine.IsParameterPresent("IgnoreCase"))
+                if (commandLineParser.IsParameterPresent("IgnoreCase"))
                 {
                     mIgnoreCase = true;
                 }
 
-                if (objParseCommandLine.IsParameterPresent("Header"))
+                if (commandLineParser.IsParameterPresent("Header"))
                 {
                     mHasHeaderLine = true;
                 }
 
-                if (objParseCommandLine.IsParameterPresent("KeepEmpty"))
+                if (commandLineParser.IsParameterPresent("KeepEmpty"))
                 {
                     mKeepEmptyLines = true;
                 }
-                
 
-                if (!ParseParameterInt(objParseCommandLine, "Col", "a column number (the first column is column 1)", ref mSortColumn)) return false;
+
+                if (!ParseParameterInt(commandLineParser, "Col", "a column number (the first column is column 1)", ref mSortColumn)) return false;
 
                 var strValue = string.Empty;
-                if (!ParseParameter(objParseCommandLine, "Delim", "a delimiter", ref strValue)) return false;
+                if (!ParseParameter(commandLineParser, "Delim", "a delimiter", ref strValue)) return false;
                 if (!string.IsNullOrWhiteSpace(strValue))
                 {
                     mColumnDelimiter = string.Copy(strValue);
                 }
 
-                if (objParseCommandLine.IsParameterPresent("IsNumeric"))
+                if (commandLineParser.IsParameterPresent("IsNumeric"))
                 {
                     mSortColumnIsNumeric = true;
                 }
 
-                if (!ParseParameterInt(objParseCommandLine, "MaxInMemory", "a file size, in MB", ref mMaxFileSizeMBForInMemorySort)) return false;
+                if (!ParseParameterInt(commandLineParser, "MaxInMemory", "a file size, in MB", ref mMaxFileSizeMBForInMemorySort)) return false;
 
-                if (!ParseParameterInt(objParseCommandLine, "ChunkSize", "a memory size, in MB", ref mChunkSizeMB)) return false;
+                if (!ParseParameterInt(commandLineParser, "ChunkSize", "a memory size, in MB", ref mChunkSizeMB)) return false;
 
-                if (!ParseParameter(objParseCommandLine, "Work", "a folder path", ref mWorkingDirectoryPath)) return false;
+                if (!ParseParameter(commandLineParser, "Work", "a folder path", ref mWorkingDirectoryPath)) return false;
 
-                if (objParseCommandLine.IsParameterPresent("L") || objParseCommandLine.IsParameterPresent("Log"))
+                if (commandLineParser.IsParameterPresent("L") || commandLineParser.IsParameterPresent("Log"))
                 {
                     mUseLogFile = true;
 
-                    if (objParseCommandLine.RetrieveValueForParameter("L", out strValue))
+                    if (commandLineParser.RetrieveValueForParameter("L", out strValue))
                         mLogFilePath = string.Copy(strValue);
-                    else if (objParseCommandLine.RetrieveValueForParameter("Log", out strValue))
+                    else if (commandLineParser.RetrieveValueForParameter("Log", out strValue))
                         mLogFilePath = string.Copy(strValue);
                 }
 
@@ -242,43 +238,20 @@ namespace FlexibleFileSortUtility
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error parsing the command line parameters: " + Environment.NewLine + ex.Message);
+                ShowErrorMessage("Error parsing the command line parameters", ex);
             }
 
             return false;
         }
 
-        private static void ShowErrorMessage(string strMessage)
+        private static void ShowErrorMessage(string message, Exception ex = null)
         {
-            const string strSeparator = "------------------------------------------------------------------------------";
-
-            Console.WriteLine();
-            Console.WriteLine(strSeparator);
-            Console.WriteLine(strMessage);
-            Console.WriteLine(strSeparator);
-            Console.WriteLine();
-
-            WriteToErrorStream(strMessage);
+            PRISM.ConsoleMsgUtils.ShowError(message, ex);
         }
 
-        private static void ShowErrorMessage(string strTitle, IEnumerable<string> items)
+        private static void ShowErrorMessage(string message, IEnumerable<string> items)
         {
-            const string strSeparator = "------------------------------------------------------------------------------";
-
-            Console.WriteLine();
-            Console.WriteLine(strSeparator);
-            Console.WriteLine(strTitle);
-            string strMessage = strTitle + ":";
-
-            foreach (string item in items)
-            {
-                Console.WriteLine("   " + item);
-                strMessage += " " + item;
-            }
-            Console.WriteLine(strSeparator);
-            Console.WriteLine();
-
-            WriteToErrorStream(strMessage);
+            PRISM.ConsoleMsgUtils.ShowErrors(message, items);
         }
 
         private static void ShowProgramHelp()
@@ -339,31 +312,14 @@ namespace FlexibleFileSortUtility
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error displaying the program syntax: " + ex.Message);
+                ShowErrorMessage("Error displaying the program syntax", ex);
             }
 
-        }
-
-        private static void WriteToErrorStream(string strErrorMessage)
-        {
-            try
-            {
-                using (var swErrorStream = new StreamWriter(Console.OpenStandardError()))
-                {
-                    swErrorStream.WriteLine(strErrorMessage);
-                }
-            }
-            // ReSharper disable once EmptyGeneralCatchClause
-            catch
-            {
-                // Ignore errors here
-            }
         }
 
         #region "Event Handlers"
 
-
-        private static void sortUtility_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        private static void SortUtility_ProgressUpdate(string progressMessage, float percentComplete)
         {
             if (DateTime.UtcNow.Subtract(mLastProgressStatus).TotalMilliseconds > 250)
             {
@@ -372,27 +328,21 @@ namespace FlexibleFileSortUtility
             }
         }
 
-
-        static void sortUtility_ErrorEvent(object sender, MessageEventArgs e)
+        private static void SortUtility_ErrorEvent(string message, Exception ex)
         {
-            if (e.Message.ToLower().StartsWith("error"))
-                Console.WriteLine(e.Message);
-            else
-                Console.WriteLine("Error: " + e.Message);
+            ShowErrorMessage(message, ex);
         }
 
-        static void sortUtility_WarningEvent(object sender, MessageEventArgs e)
+        private static void SortUtility_StatusEvent(string message)
         {
-            if (e.Message.ToLower().StartsWith("warning"))
-                Console.WriteLine(e.Message);
-            else
-                Console.WriteLine("Warning: " + e.Message);
+            Console.WriteLine(message);
         }
 
-        static void sortUtility_MessageEvent(object sender, MessageEventArgs e)
+        private static void SortUtility_WarningEvent(string message)
         {
-            Console.WriteLine(e.Message);
+            PRISM.ConsoleMsgUtils.ShowWarning(message);
         }
+
 
         #endregion
     }

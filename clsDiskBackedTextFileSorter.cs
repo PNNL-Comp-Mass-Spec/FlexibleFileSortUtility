@@ -2,19 +2,18 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using PRISM;
+using PRISM.FileProcessor;
 
 namespace FlexibleFileSortUtility
 {
-    internal class DiskBackedTextFileSorter
+    internal class DiskBackedTextFileSorter : clsEventNotifier
     {
+
         #region "Events"
 
-        public event clsProcessFilesOrFoldersBase.MessageEventHandler MessageEvent;
-
-        public event EventHandler ProgressReset;
-
-        // PercentComplete ranges from 0 to 100, but can contain decimal percentage values
-        public event clsProcessFilesOrFoldersBase.ProgressChangedEventHandler ProgressChanged;
+        /// <summary>Progress was reset</summary>
+        public event ProcessFilesOrFoldersBase.ProgressResetEventHandler ProgressReset;
 
         #endregion
 
@@ -101,7 +100,7 @@ namespace FlexibleFileSortUtility
             using (var reader = new StreamReader(new FileStream(fiInputFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
             using (var writer = new StreamWriter(new FileStream(fiOutputFile.FullName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)))
             {
-                ShowMessage("Caching data to disk");
+                OnStatusEvent("Caching data to disk");
 
                 string headerLine;
                 long dataLinesTotal;
@@ -553,11 +552,6 @@ namespace FlexibleFileSortUtility
             OnProgressReset(new EventArgs());
         }
 
-        protected void ShowMessage(string strMessage)
-        {
-            OnMessage(new MessageEventArgs(strMessage));
-        }
-
         /// <summary>
         /// Splits file inputFilePath into files of size chunkSizeMB
         /// </summary>
@@ -722,7 +716,7 @@ namespace FlexibleFileSortUtility
         private DateTime UpdateProgress(string progressMessage, long bytesOrLinesProcessed, long bytesOrLinesTotal)
         {
             var percentComplete = bytesOrLinesProcessed / (float)bytesOrLinesTotal * 100;
-            OnProgressChanged(new ProgressChangedEventArgs(progressMessage, percentComplete));
+            OnProgressUpdate(progressMessage, percentComplete);
             return DateTime.UtcNow;
         }
 
@@ -773,7 +767,7 @@ namespace FlexibleFileSortUtility
 
         private void WriteToChunkShowMessage(int chunkNumber, long dataLines)
         {
-            ShowMessage("   sorting chunk " + chunkNumber + ": " + dataLines.ToString("#,##0") + " rows");
+            OnStatusEvent("   sorting chunk " + chunkNumber + ": " + dataLines.ToString("#,##0") + " rows");
         }
 
         private string WriteToChunkWork(int chunkNumber, IEnumerable<string> buffer)
@@ -797,26 +791,12 @@ namespace FlexibleFileSortUtility
 
         #region "Event Functions"
 
-        public void OnMessage(MessageEventArgs e)
-        {
-            if (MessageEvent != null)
-                MessageEvent(this, e);
-        }
-
-        public void OnProgressChanged(ProgressChangedEventArgs e)
-        {
-            if (ProgressChanged != null)
-                ProgressChanged(this, e);
-        }
-
         public void OnProgressReset(EventArgs e)
         {
-            if (ProgressReset != null)
-                ProgressReset(this, e);
+            ProgressReset?.Invoke();
         }
 
         #endregion
-
     }
 
     internal class ComparerClassFactory
