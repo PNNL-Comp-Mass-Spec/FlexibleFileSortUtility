@@ -1,5 +1,8 @@
 FlexibleFileSortUtility Revision History
 
+Version 1.1.6622; February 17, 2018
+	- Update to .NET 4.6.2 and reference PRISM.dll
+
 Version 1.0.5610; May 12, 2015
 	- Added ComparerClassFactory
 
