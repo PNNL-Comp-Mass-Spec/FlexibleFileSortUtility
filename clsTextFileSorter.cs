@@ -155,20 +155,20 @@ namespace FlexibleFileSortUtility
             bool blnResetErrorCode)
         {
             if (blnResetErrorCode)
-                SetBaseClassErrorCode(eProcessFilesErrorCodes.NoError);
+                SetBaseClassErrorCode(ProcessFilesErrorCodes.NoError);
 
             try
             {
                 if (string.IsNullOrWhiteSpace(inputFilePath))
                 {
                     ShowErrorMessage("Input folder name is empty");
-                    SetBaseClassErrorCode(eProcessFilesErrorCodes.InvalidInputFilePath);
+                    SetBaseClassErrorCode(ProcessFilesErrorCodes.InvalidInputFilePath);
                     return false;
                 }
 
                 if (!CleanupFilePaths(ref inputFilePath, ref outputFolderPath))
                 {
-                    SetBaseClassErrorCode(eProcessFilesErrorCodes.FilePathError);
+                    SetBaseClassErrorCode(ProcessFilesErrorCodes.FilePathError);
                     return false;
                 }
 
@@ -178,30 +178,30 @@ namespace FlexibleFileSortUtility
                     // Obtain the full path to the input file
                     var fiInputFile = new FileInfo(inputFilePath);
 
-                    if (string.IsNullOrWhiteSpace(mOutputFolderPath))
+                    if (string.IsNullOrWhiteSpace(mOutputDirectoryPath))
                     {
-                        mOutputFolderPath = fiInputFile.DirectoryName;
+                        mOutputDirectoryPath = fiInputFile.DirectoryName;
                     }
 
-                    if (string.IsNullOrWhiteSpace(mOutputFolderPath))
+                    if (string.IsNullOrWhiteSpace(mOutputDirectoryPath))
                     {
-                        ShowErrorMessage("Parent directory is null for the output folder: " + mOutputFolderPath);
-                        SetBaseClassErrorCode(eProcessFilesErrorCodes.InvalidOutputFolderPath);
+                        ShowErrorMessage("Parent directory is null for the output folder: " + mOutputDirectoryPath);
+                        SetBaseClassErrorCode(ProcessFilesErrorCodes.InvalidOutputDirectoryPath);
                         return false;
                     }
 
-                    var diOutputFolder = new DirectoryInfo(mOutputFolderPath);
+                    var diOutputFolder = new DirectoryInfo(mOutputDirectoryPath);
                     string outputFilePath;
 
                     if (string.Equals(fiInputFile.DirectoryName, diOutputFolder.FullName,
                                       StringComparison.CurrentCultureIgnoreCase))
                     {
-                        outputFilePath = Path.Combine(mOutputFolderPath,
+                        outputFilePath = Path.Combine(mOutputDirectoryPath,
                             Path.GetFileNameWithoutExtension(fiInputFile.Name) + "_Sorted" + Path.GetExtension(fiInputFile.Name));
                     }
                     else
                     {
-                        outputFilePath = Path.Combine(mOutputFolderPath, fiInputFile.Name);
+                        outputFilePath = Path.Combine(mOutputDirectoryPath, fiInputFile.Name);
                     }
 
                     var success = SortFile(inputFilePath, outputFilePath);

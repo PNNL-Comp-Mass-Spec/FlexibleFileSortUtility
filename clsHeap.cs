@@ -71,13 +71,13 @@ namespace FlexibleFileSortUtility
         {
             while (true)
             {
-                var lchild = LeftChild(i);
-                if (lchild < 0) break;
-                var rchild = RightChild(i);
+                var lChild = LeftChild(i);
+                if (lChild < 0) break;
+                var rChild = RightChild(i);
 
-                var child = rchild < 0
-                  ? lchild
-                  : _comparer.Compare(_list[lchild], _list[rchild]) > 0 ? lchild : rchild;
+                var child = rChild < 0
+                  ? lChild
+                  : _comparer.Compare(_list[lChild], _list[rChild]) > 0 ? lChild : rChild;
 
                 if (_comparer.Compare(_list[child], _list[i]) < 0) break;
                 SwapCells(i, child);

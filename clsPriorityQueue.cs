@@ -16,7 +16,7 @@ namespace FlexibleFileSortUtility
             _heap = new Heap<T>(new List<T>(), 0, comparer);
         }
 
-        public int Size { get { return _heap.Count; } }
+        public int Size => _heap.Count;
 
         public T Top() { return _heap.PeekRoot(); }
 

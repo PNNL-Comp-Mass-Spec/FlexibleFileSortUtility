@@ -7,10 +7,10 @@ namespace FlexibleFileSortUtility
     class Program
     {
 
-        private const string PROGRAM_DATE = "February 17, 2018";
+        private const string PROGRAM_DATE = "October 15, 2018";
 
         private static string mInputFilePath;
-        private static string mOutputFolderPath;
+        private static string mOutputDirectoryPath;
 
         private static bool mReverseSort;
         private static bool mIgnoreCase;
@@ -35,7 +35,7 @@ namespace FlexibleFileSortUtility
             var commandLineParser = new PRISM.clsParseCommandLine();
 
             mInputFilePath = string.Empty;
-            mOutputFolderPath = string.Empty;
+            mOutputDirectoryPath = string.Empty;
 
             mReverseSort = false;
             mIgnoreCase = false;
@@ -92,7 +92,7 @@ namespace FlexibleFileSortUtility
                 sortUtility.WarningEvent += SortUtility_WarningEvent;
                 sortUtility.ProgressUpdate += SortUtility_ProgressUpdate;
 
-                var success = sortUtility.ProcessFile(mInputFilePath, mOutputFolderPath);
+                var success = sortUtility.ProcessFile(mInputFilePath, mOutputDirectoryPath);
 
                 if (!success)
                     return -2;
@@ -109,7 +109,7 @@ namespace FlexibleFileSortUtility
 
         private static string GetAppVersion()
         {
-            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
+            return PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE);
         }
 
         private static bool ParseParameter(
@@ -136,16 +136,16 @@ namespace FlexibleFileSortUtility
             string description,
             ref int targetVariable)
         {
-            var strValue = string.Empty;
-            if (!ParseParameter(commandLineParser, parameterName, description, ref strValue)) return false;
+            var value = string.Empty;
+            if (!ParseParameter(commandLineParser, parameterName, description, ref value)) return false;
 
-            if (string.IsNullOrWhiteSpace(strValue))
+            if (string.IsNullOrWhiteSpace(value))
                 return true;
 
-            if (int.TryParse(strValue, out targetVariable))
+            if (int.TryParse(value, out targetVariable))
                 return true;
 
-            ShowErrorMessage("Invalid valid for /" + parameterName + "; '" + strValue + "' is not an integer");
+            ShowErrorMessage("Invalid valid for /" + parameterName + "; '" + value + "' is not an integer");
             return false;
         }
 
@@ -171,7 +171,7 @@ namespace FlexibleFileSortUtility
                         badArguments.Add("/" + item);
                     }
 
-                    ShowErrorMessage("Invalid commmand line parameters", badArguments);
+                    ShowErrorMessage("Invalid command line parameters", badArguments);
 
                     return false;
                 }
@@ -180,7 +180,7 @@ namespace FlexibleFileSortUtility
                     mInputFilePath = commandLineParser.RetrieveNonSwitchParameter(0);
 
                 if (!ParseParameter(commandLineParser, "I", "an input file name", ref mInputFilePath)) return false;
-                if (!ParseParameter(commandLineParser, "O", "an output folder name", ref mOutputFolderPath)) return false;
+                if (!ParseParameter(commandLineParser, "O", "an output folder name", ref mOutputDirectoryPath)) return false;
 
                 if (commandLineParser.IsParameterPresent("R") ||
                     commandLineParser.IsParameterPresent("Reverse"))
@@ -206,11 +206,11 @@ namespace FlexibleFileSortUtility
 
                 if (!ParseParameterInt(commandLineParser, "Col", "a column number (the first column is column 1)", ref mSortColumn)) return false;
 
-                var strValue = string.Empty;
-                if (!ParseParameter(commandLineParser, "Delim", "a delimiter", ref strValue)) return false;
-                if (!string.IsNullOrWhiteSpace(strValue))
+                var value = string.Empty;
+                if (!ParseParameter(commandLineParser, "Delim", "a delimiter", ref value)) return false;
+                if (!string.IsNullOrWhiteSpace(value))
                 {
-                    mColumnDelimiter = string.Copy(strValue);
+                    mColumnDelimiter = string.Copy(value);
                 }
 
                 if (commandLineParser.IsParameterPresent("IsNumeric"))
@@ -228,10 +228,10 @@ namespace FlexibleFileSortUtility
                 {
                     mUseLogFile = true;
 
-                    if (commandLineParser.RetrieveValueForParameter("L", out strValue))
-                        mLogFilePath = string.Copy(strValue);
-                    else if (commandLineParser.RetrieveValueForParameter("Log", out strValue))
-                        mLogFilePath = string.Copy(strValue);
+                    if (commandLineParser.RetrieveValueForParameter("L", out value))
+                        mLogFilePath = string.Copy(value);
+                    else if (commandLineParser.RetrieveValueForParameter("Log", out value))
+                        mLogFilePath = string.Copy(value);
                 }
 
                 return true;
@@ -282,7 +282,7 @@ namespace FlexibleFileSortUtility
                 Console.WriteLine("Use /Header to indicate that a header line is present and that line should be the first line of the output file");
                 Console.WriteLine("Empty lines will be skipped by default; use /KeepEmpty to retain them");
                 Console.WriteLine();
-                Console.WriteLine("Use /Col:Colnumber to specify a column to sort on, for example /Col:2 for the 2nd column in the file");
+                Console.WriteLine("Use /Col:ColNumber to specify a column to sort on, for example /Col:2 for the 2nd column in the file");
                 Console.WriteLine("When using /Col, use /Delim:Delimiter to specify a delimiter other than tab.");
                 Console.WriteLine("For example, for a CSV file use /Delimiter:,");
                 Console.WriteLine("Use /IsNumeric to specify that data in the sort column is numeric");

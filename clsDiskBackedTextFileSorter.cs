@@ -7,13 +7,13 @@ using PRISM.FileProcessor;
 
 namespace FlexibleFileSortUtility
 {
-    internal class DiskBackedTextFileSorter : clsEventNotifier
+    internal class DiskBackedTextFileSorter : EventNotifier
     {
 
         #region "Events"
 
         /// <summary>Progress was reset</summary>
-        public event ProcessFilesOrFoldersBase.ProgressResetEventHandler ProgressReset;
+        public event ProcessFilesOrDirectoriesBase.ProgressResetEventHandler ProgressReset;
 
         #endregion
 
@@ -121,9 +121,9 @@ namespace FlexibleFileSortUtility
 
             if (!KeepTempFiles)
             {
-                foreach (var chunkfile in chunkFilePaths)
+                foreach (var chunkFile in chunkFilePaths)
                 {
-                    UtilityMethods.DeleteFileIgnoreErrors(chunkfile);
+                    UtilityMethods.DeleteFileIgnoreErrors(chunkFile);
                 }
             }
 
@@ -589,9 +589,9 @@ namespace FlexibleFileSortUtility
                         break;
 
                     dataLinesTotal++;
-                    var addon = dataLine.Length + newLineLength;
-                    bytesRead += addon;
-                    bytesReadTotal += addon;
+                    var addOn = dataLine.Length + newLineLength;
+                    bytesRead += addOn;
+                    bytesReadTotal += addOn;
 
                     if (bytesRead >= chunkSize)
                     {
@@ -663,9 +663,9 @@ namespace FlexibleFileSortUtility
                         break;
 
                     dataLinesTotal++;
-                    var addon = dataLine.Length + newLineLength;
-                    bytesRead += addon;
-                    bytesReadTotal += addon;
+                    var addOn = dataLine.Length + newLineLength;
+                    bytesRead += addOn;
+                    bytesReadTotal += addOn;
 
                     if (bytesRead >= chunkSize)
                     {
