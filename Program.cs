@@ -7,7 +7,7 @@ namespace FlexibleFileSortUtility
     class Program
     {
 
-        private const string PROGRAM_DATE = "October 15, 2018";
+        private const string PROGRAM_DATE = "October 24, 2018";
 
         private static string mInputFilePath;
         private static string mOutputDirectoryPath;
