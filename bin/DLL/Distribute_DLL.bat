@@ -10,4 +10,6 @@ xcopy FlexibleFileSortUtility.dll "F:\Documents\Projects\KenAuberry\Organism_Dat
 xcopy FlexibleFileSortUtility.dll "F:\Documents\Projects\KenAuberry\Organism_Database_Handler\Shared Libraries\" /D /Y
 xcopy FlexibleFileSortUtility.dll "F:\Documents\Projects\DataMining\Validate_Fasta_File\TestValidateFastaFileDLL\bin\" /D /Y
 
+xcopy FlexibleFileSortUtility.dll "F:\Documents\Projects\DataMining\DMS_Managers\Analysis_Manager\AM_Common" /D /Y
+
 pause
