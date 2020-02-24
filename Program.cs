@@ -60,7 +60,12 @@ namespace FlexibleFileSortUtility
             {
                 if (commandLineParser.ParseCommandLine())
                 {
-                    SetOptionsUsingCommandLineParameters(commandLineParser);
+                    var parseSuccess = SetOptionsUsingCommandLineParameters(commandLineParser);
+                    if (!parseSuccess)
+                    {
+                        System.Threading.Thread.Sleep(750);
+                        return -1;
+                    }
                 }
 
                 if (commandLineParser.NeedToShowHelp ||
