@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using PRISM;
 
 namespace FlexibleFileSortUtility
 {
     class Program
     {
 
-        private const string PROGRAM_DATE = "October 24, 2018";
+        private const string PROGRAM_DATE = "February 24, 2020";
 
         private static string mInputFilePath;
         private static string mOutputDirectoryPath;
@@ -32,7 +33,7 @@ namespace FlexibleFileSortUtility
 
         static int Main(string[] args)
         {
-            var commandLineParser = new PRISM.clsParseCommandLine();
+            var commandLineParser = new clsParseCommandLine();
 
             mInputFilePath = string.Empty;
             mOutputDirectoryPath = string.Empty;
@@ -63,7 +64,7 @@ namespace FlexibleFileSortUtility
                 }
 
                 if (commandLineParser.NeedToShowHelp ||
-                    (commandLineParser.ParameterCount + commandLineParser.NonSwitchParameterCount) == 0 ||
+                    commandLineParser.ParameterCount + commandLineParser.NonSwitchParameterCount == 0 ||
                     string.IsNullOrWhiteSpace(mInputFilePath))
                 {
                     ShowProgramHelp();
@@ -113,7 +114,7 @@ namespace FlexibleFileSortUtility
         }
 
         private static bool ParseParameter(
-            PRISM.clsParseCommandLine commandLineParser,
+            clsParseCommandLine commandLineParser,
             string parameterName,
             string description,
             ref string targetVariable)
@@ -131,7 +132,7 @@ namespace FlexibleFileSortUtility
         }
 
         private static bool ParseParameterInt(
-            PRISM.clsParseCommandLine commandLineParser,
+            clsParseCommandLine commandLineParser,
             string parameterName,
             string description,
             ref int targetVariable)
@@ -149,11 +150,11 @@ namespace FlexibleFileSortUtility
             return false;
         }
 
-        private static bool SetOptionsUsingCommandLineParameters(PRISM.clsParseCommandLine commandLineParser)
+        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine commandLineParser)
         {
             // Returns True if no problems; otherwise, returns false
 
-            var lstValidParameters = new List<string> {
+            var validParameters = new List<string> {
                 "I", "O", "R", "Reverse",
                 "IgnoreCase", "Header", "KeepEmpty",
                 "Col", "Delim", "IsNumeric",
@@ -163,10 +164,10 @@ namespace FlexibleFileSortUtility
             try
             {
                 // Make sure no invalid parameters are present
-                if (commandLineParser.InvalidParametersPresent(lstValidParameters))
+                if (commandLineParser.InvalidParametersPresent(validParameters))
                 {
                     var badArguments = new List<string>();
-                    foreach (var item in commandLineParser.InvalidParameters(lstValidParameters))
+                    foreach (var item in commandLineParser.InvalidParameters(validParameters))
                     {
                         badArguments.Add("/" + item);
                     }
@@ -239,19 +240,19 @@ namespace FlexibleFileSortUtility
             catch (Exception ex)
             {
                 ShowErrorMessage("Error parsing the command line parameters", ex);
+                return false;
             }
 
-            return false;
         }
 
         private static void ShowErrorMessage(string message, Exception ex = null)
         {
-            PRISM.ConsoleMsgUtils.ShowError(message, ex);
+            ConsoleMsgUtils.ShowError(message, ex);
         }
 
         private static void ShowErrorMessage(string message, IEnumerable<string> items)
         {
-            PRISM.ConsoleMsgUtils.ShowErrors(message, items);
+            ConsoleMsgUtils.ShowErrors(message, items);
         }
 
         private static void ShowProgramHelp()
