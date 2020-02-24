@@ -266,10 +266,11 @@ namespace FlexibleFileSortUtility
             try
             {
                 Console.WriteLine();
-                Console.WriteLine("This program sorts a text file alphabetically (forward or reverse).");
-                Console.WriteLine("It supports both in-memory sorts for smaller files and use of temporary swap files for large files.");
-                Console.WriteLine("It can alternatively sort on a column in a tab-delimited or comma-separated file.");
-                Console.WriteLine("The column sort mode also supports numeric sorting.");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "This program sorts a text file alphabetically (forward or reverse). " +
+                    "It supports both in-memory sorts for smaller files and use of temporary swap files for large files. " +
+                    "It can alternatively sort on a column in a tab-delimited or comma-separated file. " +
+                    "The column sort mode also supports numeric sorting."));
                 Console.WriteLine();
                 Console.WriteLine("Program syntax:" + Environment.NewLine + Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location));
                 Console.WriteLine("   /I:InputFilePath [/O:OutputFolderPath]");
@@ -280,40 +281,57 @@ namespace FlexibleFileSortUtility
                 Console.WriteLine("   [/L:[LogFilePath]]");
                 Console.WriteLine();
                 Console.WriteLine("The Input file path is required");
-                Console.WriteLine("The Output folder path is optional; if not specified, the sorted file will be in the same folder as the input file, but will have _Sorted appended to its name");
-                Console.WriteLine("If the output folder is different than the input file's folder, the output file name will match the input file name");
+                Console.WriteLine();
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "The Output folder path is optional; if not specified, the sorted file will be in the same folder as the input file, " +
+                    "but will have _Sorted appended to its name"));
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "If the output folder is different than the input file's folder, the output file name will match the input file name"));
                 Console.WriteLine();
                 Console.WriteLine("Use /R or /Reverse to specify a reverse sort");
-                Console.WriteLine("Use /IgnoreCase to disable case-sensitive sorting (ignored if /IsNumeric is used)");
-                Console.WriteLine("Use /Header to indicate that a header line is present and that line should be the first line of the output file");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "Use /IgnoreCase to disable case-sensitive sorting (ignored if /IsNumeric is used)"));
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "Use /Header to indicate that a header line is present and that line should be the first line of the output file"));
                 Console.WriteLine("Empty lines will be skipped by default; use /KeepEmpty to retain them");
                 Console.WriteLine();
-                Console.WriteLine("Use /Col:ColNumber to specify a column to sort on, for example /Col:2 for the 2nd column in the file");
-                Console.WriteLine("When using /Col, use /Delim:Delimiter to specify a delimiter other than tab.");
-                Console.WriteLine("For example, for a CSV file use /Delimiter:,");
-                Console.WriteLine("Use /IsNumeric to specify that data in the sort column is numeric");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "Use /Col:ColNumber to specify a column to sort on, for example /Col:2 for the 2nd column in the file"));
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "When using /Col, use /Delim:Delimiter to specify a delimiter other than tab. " +
+                    "For example, for a CSV file use /Delimiter:,"));
                 Console.WriteLine();
-                Console.WriteLine("Files less than " + TextFileSorter.DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB + " MB will be sorted in memory; override with /MaxInMemory");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "Use /IsNumeric to specify that data in the sort column is numeric"));
                 Console.WriteLine();
-                Console.WriteLine("When sorting larger files, will parse the file to create smaller temporary files, then will merge those files together.  " +
-                                  "The merging will use " + TextFileSorter.DEFAULT_CHUNK_SIZE_MB + " MB for sorting each temporary file; override with /ChunkSize");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(string.Format(
+                    "Files less than {0} MB will be sorted in memory; override with /MaxInMemory",
+                    TextFileSorter.DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB)));
                 Console.WriteLine();
-                Console.WriteLine("When sorting large files, or when replacing the source file, will create the temporary files in folder " + UtilityMethods.GetTempFolderPath());
-                Console.WriteLine(@"Use /Work to specify an alternate folder, for example /Work:C:\Temp");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(string.Format(
+                    "When sorting larger files, will parse the file to create smaller temporary files, then will merge those files together. " +
+                    "The merging will use {0} MB for sorting each temporary file; override with /ChunkSize",
+                    TextFileSorter.DEFAULT_CHUNK_SIZE_MB)));
                 Console.WriteLine();
-                Console.WriteLine("Use /L to create a log file.  Specify the name with /L:LogFilePath");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "When sorting large files, or when replacing the source file, will create the temporary files in folder " +
+                    UtilityMethods.GetTempFolderPath()));
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    @"Use /Work to specify an alternate folder, for example /Work:C:\Temp"));
                 Console.WriteLine();
-                Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "Use /L to create a log file.  Specify the name with /L:LogFilePath"));
+                Console.WriteLine();
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                    "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015"));
                 Console.WriteLine("Version: " + GetAppVersion());
                 Console.WriteLine();
 
-                Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com");
-                Console.WriteLine("Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/");
+                Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov");
+                Console.WriteLine("Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov/");
                 Console.WriteLine();
 
-
-                // Delay for 1.5 seconds in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
-                System.Threading.Thread.Sleep(1500);
+                System.Threading.Thread.Sleep(750);
 
             }
             catch (Exception ex)
