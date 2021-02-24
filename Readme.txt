@@ -53,8 +53,8 @@ Use /L to create a log file.  Specify the name with /L:LogFilePath
 -------------------------------------------------------------------------------
 Written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015
 
-E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com
-Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/   
+E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov
+Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov/   
 -------------------------------------------------------------------------------
 
 Licensed under the Apache License, Version 2.0; you may not use this file except 
