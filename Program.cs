@@ -7,7 +7,6 @@ namespace FlexibleFileSortUtility
 {
     class Program
     {
-
         private const string PROGRAM_DATE = "February 24, 2020";
 
         private static string mInputFilePath;
@@ -102,7 +101,6 @@ namespace FlexibleFileSortUtility
 
                 if (!success)
                     return -2;
-
             }
             catch (Exception ex)
             {
@@ -209,7 +207,6 @@ namespace FlexibleFileSortUtility
                     mKeepEmptyLines = true;
                 }
 
-
                 if (!ParseParameterInt(commandLineParser, "Col", "a column number (the first column is column 1)", ref mSortColumn)) return false;
 
                 var value = string.Empty;
@@ -247,7 +244,6 @@ namespace FlexibleFileSortUtility
                 ShowErrorMessage("Error parsing the command line parameters", ex);
                 return false;
             }
-
         }
 
         private static void ShowErrorMessage(string message, Exception ex = null)
@@ -262,7 +258,6 @@ namespace FlexibleFileSortUtility
 
         private static void ShowProgramHelp()
         {
-
             try
             {
                 Console.WriteLine();
@@ -332,13 +327,11 @@ namespace FlexibleFileSortUtility
                 Console.WriteLine();
 
                 System.Threading.Thread.Sleep(750);
-
             }
             catch (Exception ex)
             {
                 ShowErrorMessage("Error displaying the program syntax", ex);
             }
-
         }
 
         #region "Event Handlers"
@@ -366,7 +359,6 @@ namespace FlexibleFileSortUtility
         {
             PRISM.ConsoleMsgUtils.ShowWarning(message);
         }
-
 
         #endregion
     }

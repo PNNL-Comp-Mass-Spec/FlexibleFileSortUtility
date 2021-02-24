@@ -6,7 +6,6 @@ namespace FlexibleFileSortUtility
 {
     internal class UtilityMethods
     {
-
         public static void DeleteFileIgnoreErrors(string filePath)
         {
             var fiFile = new FileInfo(filePath);

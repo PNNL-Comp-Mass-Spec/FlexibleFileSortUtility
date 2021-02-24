@@ -9,7 +9,6 @@ namespace FlexibleFileSortUtility
 {
     internal class DiskBackedTextFileSorter : EventNotifier
     {
-
         #region "Events"
 
         /// <summary>Progress was reset</summary>
@@ -81,7 +80,6 @@ namespace FlexibleFileSortUtility
 
             if (!WorkingDirectoryPath.Exists)
                 WorkingDirectoryPath.Create();
-
         }
 
         public bool SortFile(FileInfo fiInputFile, FileInfo fiOutputFile)
@@ -172,7 +170,6 @@ namespace FlexibleFileSortUtility
             T sortKey,
             string dataLine)
         {
-
             if (lstNextKeyByFile.TryGetValue(sortKey, out var readers))
             {
                 readers.Add(new KeyValuePair<TextReader, string>(chunkReader, dataLine));
@@ -289,9 +286,7 @@ namespace FlexibleFileSortUtility
                 MergeChunksSortedList(dataLinesTotal, writer, headerLine, chunkFilePaths, lstNextKeyByFile,
                                       sortColumnToUse, delimiter);
             }
-
         }
-
 
         protected void MergeChunksSortedList(
             long dataLinesTotal,
@@ -302,7 +297,6 @@ namespace FlexibleFileSortUtility
             int sortColumnToUse,
             char delimiter)
         {
-
             try
             {
                 if (sortColumnToUse < 1)
@@ -372,8 +366,6 @@ namespace FlexibleFileSortUtility
                         }
                     }
                 }
-
-
             }
             catch (Exception ex)
             {
@@ -390,10 +382,8 @@ namespace FlexibleFileSortUtility
            int sortColumnToUse,
            char delimiter)
         {
-
             try
             {
-
                 foreach (var chunkFile in chunkFilePaths)
                 {
                     var chunkReader = new StreamReader(new FileStream(chunkFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
@@ -462,8 +452,6 @@ namespace FlexibleFileSortUtility
                         }
                     }
                 }
-
-
             }
             catch (Exception ex)
             {
@@ -479,7 +467,6 @@ namespace FlexibleFileSortUtility
         {
             try
             {
-
                 var chunkReaders = chunkFilePaths
                     .Select(path => new StreamReader(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
                     .Where(chunkReader => !chunkReader.EndOfStream)
@@ -534,7 +521,6 @@ namespace FlexibleFileSortUtility
                         dtLastProgress = DateTime.UtcNow;
                     }
                 }
-
             }
             catch (Exception ex)
             {
@@ -560,7 +546,6 @@ namespace FlexibleFileSortUtility
             out string headerLine,
             out long dataLinesTotal)
         {
-
             try
             {
                 headerLine = string.Empty;
@@ -614,7 +599,6 @@ namespace FlexibleFileSortUtility
                 }
 
                 return chunkFilePaths;
-
             }
             catch (Exception ex)
             {
@@ -700,7 +684,6 @@ namespace FlexibleFileSortUtility
                 }
 
                 return chunkFilePaths;
-
             }
             catch (Exception ex)
             {

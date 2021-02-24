@@ -8,7 +8,6 @@ namespace FlexibleFileSortUtility
 {
     public class TextFileSorter : PRISM.FileProcessor.ProcessFilesBase
     {
-
         #region "Constants"
 
         public const int DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB = 50;
@@ -37,7 +36,6 @@ namespace FlexibleFileSortUtility
             get => mChunkSizeMB;
             set
             {
-
                 var chunkSizeThresholdMB = (int)(mFreeMemoryMBAtStart * 0.95);
 
                 if (value > chunkSizeThresholdMB)
@@ -74,7 +72,6 @@ namespace FlexibleFileSortUtility
             get => mMaxFileSizeMBForInMemorySort;
             set
             {
-
                 var freeMemoryThresholdMB = (int)(mFreeMemoryMBAtStart * 0.8);
 
                 if (value > freeMemoryThresholdMB)
@@ -140,7 +137,6 @@ namespace FlexibleFileSortUtility
                 mFreeMemoryMBAtStart = MIN_ALLOWED_REPORTED_FREE_MEMORY_MB_AT_START;
 
             ResetToDefaults();
-
         }
 
         public override string GetErrorMessage()
@@ -174,7 +170,6 @@ namespace FlexibleFileSortUtility
 
                 try
                 {
-
                     // Obtain the full path to the input file
                     var fiInputFile = new FileInfo(inputFilePath);
 
@@ -206,7 +201,6 @@ namespace FlexibleFileSortUtility
 
                     var success = SortFile(inputFilePath, outputFilePath);
                     return success;
-
                 }
                 catch (Exception ex)
                 {
@@ -219,8 +213,6 @@ namespace FlexibleFileSortUtility
                 HandleException("Error in ProcessFile", ex);
                 return false;
             }
-
-
         }
 
         public void ResetToDefaults()
@@ -317,7 +309,6 @@ namespace FlexibleFileSortUtility
                 HandleException("Error in SortFileInMemory", ex);
                 return false;
             }
-
         }
 
         public bool SortFileUseSwap(FileInfo fiInputFile, FileInfo fiOutputFile)
@@ -365,7 +356,6 @@ namespace FlexibleFileSortUtility
                 HandleException("Error in SortFileUseSwap", ex);
                 return false;
             }
-
         }
 
         #endregion
@@ -398,12 +388,10 @@ namespace FlexibleFileSortUtility
 
         private float GetFreeMemoryMB()
         {
-
             float freeMemoryMB = 0;
 
             try
             {
-
                 var iterations = 0;
                 freeMemoryMB = 0;
                 while (freeMemoryMB < float.Epsilon && iterations <= 3)
@@ -417,7 +405,6 @@ namespace FlexibleFileSortUtility
                     }
                     iterations += 1;
                 }
-
             }
             catch (Exception ex)
             {
@@ -432,16 +419,13 @@ namespace FlexibleFileSortUtility
                 }
             }
 
-
             try
             {
                 if (freeMemoryMB < float.Epsilon)
                 {
                     // The Performance counters are still reporting a value of 0 for available memory; use an alternate method
-
                     freeMemoryMB = Convert.ToSingle(new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory / 1024.0 / 1024.0);
                 }
-
             }
             catch (Exception ex)
             {
@@ -453,7 +437,6 @@ namespace FlexibleFileSortUtility
             }
 
             return freeMemoryMB;
-
         }
 
         private IComparer<string> GetCurrentStringComparer()
@@ -575,7 +558,6 @@ namespace FlexibleFileSortUtility
                     }
                 }
             }
-
         }
 
         private List<string> StoreDataInMemory(StreamReader reader)
@@ -740,7 +722,6 @@ namespace FlexibleFileSortUtility
                     dtLastProgress = DateTime.UtcNow;
                 }
             }
-
         }
 
         private void WriteInMemoryDataToDisk(TextWriter writer, List<string> cachedData, string headerLine)
@@ -771,7 +752,6 @@ namespace FlexibleFileSortUtility
 
         #endregion
 
-
         #region "Event Handlers"
 
         private void DiskBackedFileSorter_ProgressReset()
@@ -780,7 +760,6 @@ namespace FlexibleFileSortUtility
         }
 
         #endregion
-
 
     }
 }
