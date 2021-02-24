@@ -7,7 +7,7 @@ namespace FlexibleFileSortUtility
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <remarks>From http://www.sinbadsoft.com/blog/binary-heap-heap-sort-and-priority-queue/ </remarks>
-    public class HeapSort<T>
+    public static class HeapSort<T>
     {
         public static void Sort(IList<T> list, IComparer<T> comparer)
         {

@@ -4,20 +4,22 @@ using System.IO;
 
 namespace FlexibleFileSortUtility
 {
-    internal class UtilityMethods
+    internal static class UtilityMethods
     {
         public static void DeleteFileIgnoreErrors(string filePath)
         {
-            var fiFile = new FileInfo(filePath);
-            DeleteFileIgnoreErrors(fiFile);
+            var targetFile = new FileInfo(filePath);
+            DeleteFileIgnoreErrors(targetFile);
         }
 
-        public static void DeleteFileIgnoreErrors(FileInfo fiTempFile)
+        public static void DeleteFileIgnoreErrors(FileInfo targetFile)
         {
             try
             {
-                if (fiTempFile.Exists)
-                    fiTempFile.Delete();
+                if (targetFile.Exists)
+                {
+                    targetFile.Delete();
+                }
             }
             catch (Exception)
             {
@@ -29,9 +31,9 @@ namespace FlexibleFileSortUtility
         {
             try
             {
-                var fiTempFile = new FileInfo(Path.GetTempFileName());
-                DeleteFileIgnoreErrors(fiTempFile);
-                return fiTempFile.DirectoryName;
+                var tempFile = new FileInfo(Path.GetTempFileName());
+                DeleteFileIgnoreErrors(tempFile);
+                return tempFile.DirectoryName;
             }
             catch (Exception)
             {
@@ -42,7 +44,9 @@ namespace FlexibleFileSortUtility
         public static IComparer<string> GetStringComparer(bool ignoreCase)
         {
             if (ignoreCase)
+            {
                 return StringComparer.OrdinalIgnoreCase;
+            }
 
             return StringComparer.Ordinal;
         }

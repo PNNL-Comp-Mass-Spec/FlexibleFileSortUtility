@@ -5,9 +5,9 @@ using PRISM;
 
 namespace FlexibleFileSortUtility
 {
-    class Program
+    public static class Program
     {
-        private const string PROGRAM_DATE = "February 24, 2020";
+        private const string PROGRAM_DATE = "February 24, 2021";
 
         private static string mInputFilePath;
         private static string mOutputDirectoryPath;
@@ -30,7 +30,7 @@ namespace FlexibleFileSortUtility
 
         private static DateTime mLastProgressStatus;
 
-        static int Main(string[] args)
+        private static int Main()
         {
             var commandLineParser = new clsParseCommandLine();
 
@@ -357,7 +357,7 @@ namespace FlexibleFileSortUtility
 
         private static void SortUtility_WarningEvent(string message)
         {
-            PRISM.ConsoleMsgUtils.ShowWarning(message);
+            ConsoleMsgUtils.ShowWarning(message);
         }
 
         #endregion

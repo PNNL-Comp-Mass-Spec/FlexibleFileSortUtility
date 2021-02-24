@@ -7,7 +7,7 @@ namespace FlexibleFileSortUtility
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <remarks>From http://www.sinbadsoft.com/blog/binary-heap-heap-sort-and-priority-queue/ </remarks>
-    class PriorityQueue<T>
+    internal class PriorityQueue<T>
     {
         private readonly Heap<T> _heap;
 

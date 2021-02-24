@@ -30,7 +30,9 @@ namespace FlexibleFileSortUtility
             set
             {
                 if (value < 1)
+                {
                     value = 1;
+                }
 
                 mChunkSizeMB = value;
             }
@@ -74,55 +76,60 @@ namespace FlexibleFileSortUtility
             ReverseSort = false;
 
             if (string.IsNullOrWhiteSpace(workDirectoryPath))
+            {
                 throw new ArgumentNullException(workDirectoryPath, "workDirectoryPath cannot be empty");
+            }
 
             WorkingDirectoryPath = new DirectoryInfo(workDirectoryPath);
 
             if (!WorkingDirectoryPath.Exists)
+            {
                 WorkingDirectoryPath.Create();
+            }
         }
 
-        public bool SortFile(FileInfo fiInputFile, FileInfo fiOutputFile)
+        public bool SortFile(FileInfo inputFile, FileInfo outputFile)
         {
-            return SortFile(fiInputFile, fiOutputFile, 0, false, '\t');
+            return SortFile(inputFile, outputFile, 0, false, '\t');
         }
 
-        public bool SortFile(FileInfo fiInputFile, FileInfo fiOutputFile, int sortColumnToUse, bool sortColIsNumeric, char delimiter)
+        public bool SortFile(FileInfo inputFile, FileInfo outputFile, int sortColumnToUse, bool sortColIsNumeric, char delimiter)
         {
             List<string> chunkFilePaths;
 
             // We open the writer file handle immediately to make sure we have write access to the output file
-            using (var reader = new StreamReader(new FileStream(fiInputFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
-            using (var writer = new StreamWriter(new FileStream(fiOutputFile.FullName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)))
+            using var reader = new StreamReader(new FileStream(inputFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
+            using var writer = new StreamWriter(new FileStream(outputFile.FullName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
+
+            OnStatusEvent("Caching data to disk");
+
+            string headerLine;
+            long dataLinesTotal;
+
+            if (sortColumnToUse > 0)
             {
-                OnStatusEvent("Caching data to disk");
-
-                string headerLine;
-                long dataLinesTotal;
-
-                if (sortColumnToUse > 0)
-                    chunkFilePaths = SplitInSortedChunksSortOnColumn(reader, out headerLine, out dataLinesTotal, sortColumnToUse, sortColIsNumeric, delimiter);
-                else
-                {
-                    chunkFilePaths = SplitInSortedChunks(reader, out headerLine, out dataLinesTotal);
-                }
-
-                if (sortColumnToUse < 1)
-                {
-                    MergeChunksPriorityQueue(dataLinesTotal, writer, headerLine, chunkFilePaths);
-                }
-                else
-                {
-                    MergeChunksSortedList(dataLinesTotal, writer, headerLine, chunkFilePaths.ToList(), sortColumnToUse, sortColIsNumeric, delimiter);
-                }
+                chunkFilePaths = SplitInSortedChunksSortOnColumn(reader, out headerLine, out dataLinesTotal, sortColumnToUse, sortColIsNumeric, delimiter);
+            }
+            else
+            {
+                chunkFilePaths = SplitInSortedChunks(reader, out headerLine, out dataLinesTotal);
             }
 
-            if (!KeepTempFiles)
+            if (sortColumnToUse < 1)
             {
-                foreach (var chunkFile in chunkFilePaths)
-                {
-                    UtilityMethods.DeleteFileIgnoreErrors(chunkFile);
-                }
+                MergeChunksPriorityQueue(dataLinesTotal, writer, headerLine, chunkFilePaths);
+            }
+            else
+            {
+                MergeChunksSortedList(dataLinesTotal, writer, headerLine, chunkFilePaths.ToList(), sortColumnToUse, sortColIsNumeric, delimiter);
+            }
+
+            if (KeepTempFiles)
+                return true;
+
+            foreach (var chunkFile in chunkFilePaths)
+            {
+                UtilityMethods.DeleteFileIgnoreErrors(chunkFile);
             }
 
             return true;
@@ -178,7 +185,7 @@ namespace FlexibleFileSortUtility
             {
                 readers = new List<KeyValuePair<TextReader, string>>
                     {
-                        new KeyValuePair<TextReader, string>(chunkReader, dataLine)
+                        new(chunkReader, dataLine)
                     };
 
                 lstNextKeyByFile.Add(sortKey, readers);
@@ -202,7 +209,9 @@ namespace FlexibleFileSortUtility
             var sortKey = GetSortKey(dataLine, sortColumnToUse, delimiter);
 
             if (double.TryParse(sortKey, out var value))
+            {
                 return value;
+            }
 
             return 0;
         }
@@ -226,9 +235,13 @@ namespace FlexibleFileSortUtility
                     var number = (char)(oRand.Next(48, 57));
 
                     if (oRand.NextDouble() > 0.38)
+                    {
                         tempFileName += letter;
+                    }
                     else
+                    {
                         tempFileName += number;
+                    }
                 }
 
                 tempFileName += ".tmp";
@@ -254,7 +267,7 @@ namespace FlexibleFileSortUtility
                 }
                 catch (Exception ex)
                 {
-                    failureCount += 1;
+                    failureCount++;
                     if (failureCount > MAX_FAILURES)
                     {
                         throw new IOException("Unable to create temp file " + fiTempFile.FullName, ex);
@@ -300,7 +313,9 @@ namespace FlexibleFileSortUtility
             try
             {
                 if (sortColumnToUse < 1)
+                {
                     sortColumnToUse = 1;
+                }
 
                 foreach (var chunkFile in chunkFilePaths)
                 {
@@ -313,7 +328,9 @@ namespace FlexibleFileSortUtility
 
                     var dataLine = chunkReader.ReadLine();
                     if (dataLine == null)
+                    {
                         continue;
+                    }
 
                     // Note that sort keys are doubles in this function
                     AddSortedListEntry(lstNextKeyByFile, chunkReader, dataLine, sortColumnToUse, delimiter);
@@ -324,15 +341,21 @@ namespace FlexibleFileSortUtility
                 ResetProgress();
 
                 if (!string.IsNullOrEmpty(headerLine))
+                {
                     writer.WriteLine(headerLine);
+                }
 
                 while (lstNextKeyByFile.Count > 0)
                 {
                     KeyValuePair<double, List<KeyValuePair<TextReader, string>>> nextItem;
                     if (ReverseSort)
+                    {
                         nextItem = lstNextKeyByFile.Last();
+                    }
                     else
+                    {
                         nextItem = lstNextKeyByFile.First();
+                    }
 
                     var sortKey = nextItem.Key;
                     var chunkReaders = nextItem.Value;
@@ -395,12 +418,18 @@ namespace FlexibleFileSortUtility
 
                     var dataLine = chunkReader.ReadLine();
                     if (dataLine == null)
+                    {
                         continue;
+                    }
 
                     if (sortColumnToUse > 0)
+                    {
                         AddSortedListEntry(lstNextKeyByFile, chunkReader, dataLine, sortColumnToUse, delimiter);
+                    }
                     else
+                    {
                         AddSortedListEntry(lstNextKeyByFile, chunkReader, dataLine);
+                    }
                 }
 
                 long linesWritten = 0;
@@ -408,15 +437,21 @@ namespace FlexibleFileSortUtility
                 ResetProgress();
 
                 if (!string.IsNullOrEmpty(headerLine))
+                {
                     writer.WriteLine(headerLine);
+                }
 
                 while (lstNextKeyByFile.Count > 0)
                 {
                     KeyValuePair<string, List<KeyValuePair<TextReader, string>>> nextItem;
                     if (ReverseSort)
+                    {
                         nextItem = lstNextKeyByFile.Last();
+                    }
                     else
+                    {
                         nextItem = lstNextKeyByFile.First();
+                    }
 
                     var sortKey = nextItem.Key;
                     var chunkReaders = nextItem.Value;
@@ -432,9 +467,13 @@ namespace FlexibleFileSortUtility
                         if (nextLine != null)
                         {
                             if (sortColumnToUse > 0)
+                            {
                                 AddSortedListEntry(lstNextKeyByFile, chunkReader.Key, nextLine, sortColumnToUse, delimiter);
+                            }
                             else
+                            {
                                 AddSortedListEntry(lstNextKeyByFile, chunkReader.Key, nextLine);
+                            }
                         }
                         else
                         {
@@ -493,7 +532,9 @@ namespace FlexibleFileSortUtility
                 ResetProgress();
 
                 if (!string.IsNullOrEmpty(headerLine))
+                {
                     writer.WriteLine(headerLine);
+                }
 
                 while (queue.Size > 0)
                 {
@@ -530,7 +571,7 @@ namespace FlexibleFileSortUtility
 
         protected void ResetProgress()
         {
-            OnProgressReset(new EventArgs());
+            OnProgressReset();
         }
 
         /// <summary>
@@ -565,13 +606,17 @@ namespace FlexibleFileSortUtility
                 var cachedData = new List<string>();
 
                 if (!reader.EndOfStream && HasHeaderLine)
+                {
                     headerLine = reader.ReadLine();
+                }
 
                 while (!reader.EndOfStream)
                 {
                     var dataLine = reader.ReadLine();
                     if (dataLine == null)
+                    {
                         break;
+                    }
 
                     dataLinesTotal++;
                     var addOn = dataLine.Length + newLineLength;
@@ -593,7 +638,7 @@ namespace FlexibleFileSortUtility
                     }
                 }
 
-                if (cachedData.Any())
+                if (cachedData.Count > 0)
                 {
                     chunkFilePaths.Add(WriteToChunk(ref chunkNumber, cachedData));
                 }
@@ -635,7 +680,9 @@ namespace FlexibleFileSortUtility
                 var sortKeysNumeric = new List<double>();
 
                 if (!reader.EndOfStream && HasHeaderLine)
+                {
                     headerLine = reader.ReadLine();
+                }
 
                 var numericComparer = Comparer<double>.Default;
                 var stringComparer = UtilityMethods.GetStringComparer(IgnoreCase);
@@ -644,7 +691,9 @@ namespace FlexibleFileSortUtility
                 {
                     var dataLine = reader.ReadLine();
                     if (dataLine == null)
+                    {
                         break;
+                    }
 
                     dataLinesTotal++;
                     var addOn = dataLine.Length + newLineLength;
@@ -654,9 +703,13 @@ namespace FlexibleFileSortUtility
                     if (bytesRead >= chunkSize)
                     {
                         if (isNumeric)
+                        {
                             chunkFilePaths.Add(WriteToChunk(ref chunkNumber, cachedData, sortKeysNumeric, numericComparer));
+                        }
                         else
+                        {
                             chunkFilePaths.Add(WriteToChunk(ref chunkNumber, cachedData, sortKeys, stringComparer));
+                        }
 
                         bytesRead = 0L;
                     }
@@ -664,9 +717,13 @@ namespace FlexibleFileSortUtility
                     cachedData.Add(dataLine);
 
                     if (isNumeric)
+                    {
                         sortKeysNumeric.Add(GetSortKeyNumeric(dataLine, sortColumnToUse, delimiter));
+                    }
                     else
+                    {
                         sortKeys.Add(GetSortKey(dataLine, sortColumnToUse, delimiter));
+                    }
 
                     dataLinesTotal++;
                     if (dataLinesTotal % 5000 == 0 && DateTime.UtcNow.Subtract(dtLastProgress).TotalSeconds >= 0.5)
@@ -675,12 +732,16 @@ namespace FlexibleFileSortUtility
                     }
                 }
 
-                if (cachedData.Any())
+                if (cachedData.Count > 0)
                 {
                     if (isNumeric)
+                    {
                         chunkFilePaths.Add(WriteToChunk(ref chunkNumber, cachedData, sortKeysNumeric, numericComparer));
+                    }
                     else
+                    {
                         chunkFilePaths.Add(WriteToChunk(ref chunkNumber, cachedData, sortKeys, stringComparer));
+                    }
                 }
 
                 return chunkFilePaths;
@@ -750,26 +811,26 @@ namespace FlexibleFileSortUtility
 
         private string WriteToChunkWork(int chunkNumber, IEnumerable<string> buffer)
         {
-            FileInfo fiChunkFile;
-            using (var swOutFile = GetTempFile(chunkNumber, out fiChunkFile))
-            {
-                foreach (var line in buffer)
-                {
-                    if (!KeepEmptyLines && string.IsNullOrWhiteSpace(line))
-                        continue;
+            using var writer = GetTempFile(chunkNumber, out var chunkFile);
 
-                    swOutFile.WriteLine(line);
+            foreach (var line in buffer)
+            {
+                if (!KeepEmptyLines && string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
                 }
+
+                writer.WriteLine(line);
             }
 
-            return fiChunkFile.FullName;
+            return chunkFile.FullName;
         }
 
         #endregion
 
         #region "Event Functions"
 
-        public void OnProgressReset(EventArgs e)
+        public void OnProgressReset()
         {
             ProgressReset?.Invoke();
         }
@@ -777,7 +838,7 @@ namespace FlexibleFileSortUtility
         #endregion
     }
 
-    internal class ComparerClassFactory
+    internal static class ComparerClassFactory
     {
         public static ComparerClassBase GetComparer(bool reverseSort, bool ignoreCase)
         {
@@ -786,16 +847,24 @@ namespace FlexibleFileSortUtility
             if (reverseSort)
             {
                 if (ignoreCase)
+                {
                     comparer = new ComparerClassReverseIgnoreCase();
+                }
                 else
+                {
                     comparer = new ComparerClassReverse();
+                }
             }
             else
             {
                 if (ignoreCase)
+                {
                     comparer = new ComparerClassForwardIgnoreCase();
+                }
                 else
+                {
                     comparer = new ComparerClassForward();
+                }
             }
 
             return comparer;
