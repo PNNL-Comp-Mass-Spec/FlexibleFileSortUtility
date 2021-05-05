@@ -12,4 +12,7 @@ xcopy FlexibleFileSortUtility.dll "F:\Documents\Projects\DataMining\Validate_Fas
 
 xcopy FlexibleFileSortUtility.dll "F:\Documents\Projects\DataMining\DMS_Managers\Analysis_Manager\AM_Common" /D /Y
 
+xcopy FlexibleFileSortUtility.dll "F:\Documents\Projects\DataMining\Validate_Fasta_File\Lib" /D /Y
+xcopy FlexibleFileSortUtility.dll "F:\Documents\Projects\DataMining\Validate_Fasta_File\bin" /D /Y
+
 pause
