@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Threading;
 
 namespace FlexibleFileSortUtility
 {
@@ -103,8 +101,6 @@ namespace FlexibleFileSortUtility
         private int mMaxFileSizeMBForInMemorySort;
 
         private bool mWarnedAvailablePhysicalMemoryError;
-        private bool mWarnedPerformanceCounterError;
-        private readonly PerformanceCounter mFreeMemoryPerformanceCounter;
 
         private readonly float mFreeMemoryMBAtStart;
 
@@ -113,11 +109,6 @@ namespace FlexibleFileSortUtility
         /// </summary>
         public TextFileSorter()
         {
-            mFreeMemoryPerformanceCounter = new PerformanceCounter("Memory", "Available MBytes")
-            {
-                ReadOnly = true
-            };
-
             mFreeMemoryMBAtStart = GetFreeMemoryMB();
             if (mFreeMemoryMBAtStart < MIN_ALLOWED_REPORTED_FREE_MEMORY_MB_AT_START)
                 mFreeMemoryMBAtStart = MIN_ALLOWED_REPORTED_FREE_MEMORY_MB_AT_START;
@@ -204,7 +195,6 @@ namespace FlexibleFileSortUtility
         public void ResetToDefaults()
         {
             mWarnedAvailablePhysicalMemoryError = false;
-            mWarnedPerformanceCounterError = false;
 
             ChunkSizeMB = DEFAULT_CHUNK_SIZE_MB;
             MaxFileSizeMBForInMemorySort = DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB;
@@ -370,55 +360,21 @@ namespace FlexibleFileSortUtility
 
         private float GetFreeMemoryMB()
         {
-            float freeMemoryMB = 0;
-
             try
             {
-                var iterations = 0;
-                freeMemoryMB = 0;
-                while (freeMemoryMB < float.Epsilon && iterations <= 3)
-                {
-                    freeMemoryMB = mFreeMemoryPerformanceCounter.NextValue();
-                    if (freeMemoryMB < float.Epsilon)
-                    {
-                        // You sometimes have to call .NextValue() several times before it returns a useful number
-                        // Wait 1 second and then try again
-                        Thread.Sleep(1000);
-                    }
-                    iterations++;
-                }
-            }
-            catch (Exception ex)
-            {
-                // To avoid seeing this in the logs continually, we will only post this log message between 12 am and 12:30 am
-                // A possible fix for this is to add the user who is running this process to the "Performance Monitor Users" group in "Local Users and Groups" on the machine showing this error.
-                // Alternatively, add the user to the "Administrators" group.
-                // In either case, you will need to reboot the computer for the change to take effect
-                if (!mWarnedPerformanceCounterError)
-                {
-                    mWarnedPerformanceCounterError = true;
-                    ShowWarning("Error instantiating the Memory.[Available MBytes] performance counter: " + ex.Message);
-                }
-            }
-
-            try
-            {
-                if (freeMemoryMB < float.Epsilon)
-                {
-                    // The Performance counters are still reporting a value of 0 for available memory; use an alternate method
-                    freeMemoryMB = Convert.ToSingle(new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory / 1024.0 / 1024.0);
-                }
+                return PRISM.SystemInfo.GetFreeMemoryMB();
             }
             catch (Exception ex)
             {
                 if (!mWarnedAvailablePhysicalMemoryError)
                 {
                     mWarnedAvailablePhysicalMemoryError = true;
-                    ShowWarning("Error determining available memory using Devices.ComputerInfo().AvailablePhysicalMemory: " + ex.Message);
+                    ShowWarning("Error determining available memory: " + ex.Message);
                 }
-            }
 
-            return freeMemoryMB;
+                // Assume 2 GB free
+                return 2 * 1024;
+            }
         }
 
         private IComparer<string> GetCurrentStringComparer()
