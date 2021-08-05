@@ -9,20 +9,12 @@ namespace FlexibleFileSortUtility
 {
     internal class DiskBackedTextFileSorter : EventNotifier
     {
-        #region "Events"
-
-        /// <summary>Progress was reset</summary>
+        /// <summary>
+        /// Progress was reset
+        /// </summary>
         public event ProcessFilesOrDirectoriesBase.ProgressResetEventHandler ProgressReset;
 
-        #endregion
-
-        #region "Constants"
-
         public const int DEFAULT_CHUNK_SIZE_MB = 50;
-
-        #endregion
-
-        #region "Properties"
 
         public int ChunkSizeMB
         {
@@ -54,15 +46,7 @@ namespace FlexibleFileSortUtility
 
         public DirectoryInfo WorkingDirectoryPath { get; }
 
-        #endregion
-
-        #region "Member variables
-
         protected int mChunkSizeMB;
-
-        #endregion
-
-        #region "Public methods"
 
         /// <summary>
         /// Constructor
@@ -134,10 +118,6 @@ namespace FlexibleFileSortUtility
 
             return true;
         }
-
-        #endregion
-
-        #region "Private methods"
 
         private static void AddSortedListEntry(
            IDictionary<string, List<KeyValuePair<TextReader, string>>> lstNextKeyByFile,
@@ -826,16 +806,10 @@ namespace FlexibleFileSortUtility
             return chunkFile.FullName;
         }
 
-        #endregion
-
-        #region "Event Functions"
-
         public void OnProgressReset()
         {
             ProgressReset?.Invoke();
         }
-
-        #endregion
     }
 
     internal static class ComparerClassFactory

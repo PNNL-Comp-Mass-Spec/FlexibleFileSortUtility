@@ -8,15 +8,9 @@ namespace FlexibleFileSortUtility
 {
     public class TextFileSorter : PRISM.FileProcessor.ProcessFilesBase
     {
-        #region "Constants"
-
         public const int DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB = 50;
         public const int DEFAULT_CHUNK_SIZE_MB = DiskBackedTextFileSorter.DEFAULT_CHUNK_SIZE_MB;
         private const int MIN_ALLOWED_REPORTED_FREE_MEMORY_MB_AT_START = 30;
-
-        #endregion
-
-        #region "Properties"
 
         /// <summary>
         /// Delimiter to use when SortColumn is > 0
@@ -104,10 +98,6 @@ namespace FlexibleFileSortUtility
         /// </summary>
         public string WorkingDirectoryPath { get; set; }
 
-        #endregion
-
-        #region "Member variables
-
         private string mColumnDelimiter;
         private int mChunkSizeMB;
         private int mMaxFileSizeMBForInMemorySort;
@@ -117,10 +107,6 @@ namespace FlexibleFileSortUtility
         private readonly PerformanceCounter mFreeMemoryPerformanceCounter;
 
         private readonly float mFreeMemoryMBAtStart;
-
-        #endregion
-
-        #region "Public methods"
 
         /// <summary>
         /// Constructor
@@ -357,10 +343,6 @@ namespace FlexibleFileSortUtility
                 return false;
             }
         }
-
-        #endregion
-
-        #region "Private methods"
 
         private double BytesToMB(long length)
         {
@@ -749,16 +731,9 @@ namespace FlexibleFileSortUtility
             }
         }
 
-        #endregion
-
-        #region "Event Handlers"
-
         private void DiskBackedFileSorter_ProgressReset()
         {
             ResetProgress();
         }
-
-        #endregion
-
     }
 }
