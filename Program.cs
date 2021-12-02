@@ -318,12 +318,12 @@ namespace FlexibleFileSortUtility
                     "Use /L to create a log file.  Specify the name with /L:LogFilePath"));
                 Console.WriteLine();
                 Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
-                    "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015"));
+                    "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)"));
                 Console.WriteLine("Version: " + GetAppVersion());
                 Console.WriteLine();
 
                 Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov");
-                Console.WriteLine("Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov/");
+                Console.WriteLine("Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics");
                 Console.WriteLine();
 
                 System.Threading.Thread.Sleep(750);
