@@ -72,6 +72,7 @@ namespace FlexibleFileSortUtility
             }
         }
 
+        // ReSharper disable once UnusedMember.Global
         public bool SortFile(FileInfo inputFile, FileInfo outputFile)
         {
             return SortFile(inputFile, outputFile, 0, false, '\t');

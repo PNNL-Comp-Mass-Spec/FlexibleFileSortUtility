@@ -18,6 +18,7 @@ namespace FlexibleFileSortUtility
 
         public int Size => _heap.Count;
 
+        // ReSharper disable once UnusedMember.Global
         public T Top() { return _heap.PeekRoot(); }
 
         public void Push(T e) { _heap.Insert(e); }

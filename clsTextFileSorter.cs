@@ -4,6 +4,7 @@ using System.IO;
 
 namespace FlexibleFileSortUtility
 {
+    // ReSharper disable once UnusedMember.Global
     public class TextFileSorter : PRISM.FileProcessor.ProcessFilesBase
     {
         public const int DEFAULT_IN_MEMORY_SORT_MAX_FILE_SIZE_MB = 50;
