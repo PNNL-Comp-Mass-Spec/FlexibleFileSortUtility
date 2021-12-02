@@ -95,9 +95,7 @@ namespace FlexibleFileSortUtility
 
         private void SwapCells(int i, int j)
         {
-            var temp = _list[i];
-            _list[i] = _list[j];
-            _list[j] = temp;
+            (_list[i], _list[j]) = (_list[j], _list[i]);
         }
     }
 }
