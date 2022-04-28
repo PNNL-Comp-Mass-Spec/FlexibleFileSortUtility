@@ -16,4 +16,4 @@ xcopy FlexibleFileSortUtility.dll F:\Documents\Projects\DataMining\Validate_Fast
 xcopy FlexibleFileSortUtility.dll F:\Documents\Projects\DataMining\Validate_Fasta_File\bin\ /D /Y
 xcopy FlexibleFileSortUtility.dll F:\Documents\Projects\DataMining\Validate_Fasta_File\bin\DLL\ /D /Y
 
-pause
+if not "%1"=="NoPause" pause
