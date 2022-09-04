@@ -601,13 +601,13 @@ namespace FlexibleFileSortUtility
         /// <summary>
         /// Write data to disk
         /// </summary>
+        /// <remarks>cachedData and sortKeys are passed by ref because the memory is deallocated after the data is copied to array variables</remarks>
         /// <typeparam name="T"></typeparam>
         /// <param name="writer"></param>
         /// <param name="cachedData"></param>
         /// <param name="sortKeys"></param>
         /// <param name="headerLine"></param>
         /// <param name="comparer"></param>
-        /// <remarks>cachedData and sortKeys are passed by ref because the memory is deallocated after the data is copied to array variables</remarks>
         private void WriteInMemoryColumnDataToDisk<T>(
             TextWriter writer,
             ref List<string> cachedData,

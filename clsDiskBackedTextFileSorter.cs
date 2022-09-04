@@ -558,11 +558,11 @@ namespace FlexibleFileSortUtility
         /// <summary>
         /// Splits file inputFilePath into files of size chunkSizeMB
         /// </summary>
+        /// <remarks>Files are stored in the folder defined by WorkDirectory</remarks>
         /// <param name="reader"></param>
         /// <param name="headerLine"></param>
         /// <param name="dataLinesTotal"></param>
         /// <returns>The paths to the chunked files</returns>
-        /// <remarks>Files are stored in the folder defined by WorkDirectory</remarks>
         protected List<string> SplitInSortedChunks(
             StreamReader reader,
             out string headerLine,

@@ -6,8 +6,8 @@ namespace FlexibleFileSortUtility
     /// <summary>
     /// Binary heap implementation
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     /// <remarks>From http://www.sinbadsoft.com/blog/binary-heap-heap-sort-and-priority-queue/ </remarks>
+    /// <typeparam name="T"></typeparam>
     public class Heap<T>
     {
         private readonly IList<T> _list;
